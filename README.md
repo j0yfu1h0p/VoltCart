@@ -3,19 +3,19 @@
 Full-stack commerce backend (Express + MongoDB) with frontend HTML pages for auth, account, checkout, tracking, and admin operations.
 
 # UI's
-<img width="1920" height="1440" alt="create" src="https://github.com/user-attachments/assets/61fe4d8e-d3e5-4f29-a181-866762a57097" />
-<img width="1920" height="1440" alt="login-acc" src="https://github.com/user-attachments/assets/bd1cc266-a8f6-4f8d-815a-eee766fe4e61" />
-<img width="1920" height="1440" alt="account" src="https://github.com/user-attachments/assets/19405860-7c2d-4b33-90ee-63f9f6363916" />
-<img width="1920" height="1440" alt="orders-user" src="https://github.com/user-attachments/assets/186b6f62-56f8-4479-930d-7d1320856389" />
-<img width="1920" height="1440" alt="chcekout" src="https://github.com/user-attachments/assets/663540ba-c96e-47f2-929c-c8c3f7c82ac8" />
-<img width="1920" height="1440" alt="products-user" src="https://github.com/user-attachments/assets/d7b88fa5-86b5-4f26-bbd3-59a60124957a" />
-<img width="1920" height="1440" alt="index" src="https://github.com/user-attachments/assets/eb73130c-3256-4872-922c-c72a33ae0439" />
-<img width="1920" height="1440" alt="products" src="https://github.com/user-attachments/assets/85c60934-beba-4600-8e69-04c59dd1dd2e" />
-<img width="1920" height="1440" alt="orders" src="https://github.com/user-attachments/assets/c18a76c5-23e8-4325-b59b-935ed490fe3d" />
-<img width="1920" height="1440" alt="s-dash2" src="https://github.com/user-attachments/assets/ce7e5dfc-ed61-4a58-8f52-5b7a3e8c2d9d" />
-<img width="1920" height="1440" alt="s-dash1" src="https://github.com/user-attachments/assets/ab6358cb-c444-4e0b-8548-bbfe3b8aa3a6" />
-<img width="1920" height="1440" alt="dash1" src="https://github.com/user-attachments/assets/cb0422c6-c529-4757-ba46-7618220542fb" />
-<img width="1920" height="1440" alt="dash2" src="https://github.com/user-attachments/assets/663331ef-6408-4987-87f8-c2050649ff05" />
+<img width="1280" height="720" alt="create" src="https://github.com/user-attachments/assets/61fe4d8e-d3e5-4f29-a181-866762a57097" />
+<img width="1280" height="720" alt="login-acc" src="https://github.com/user-attachments/assets/bd1cc266-a8f6-4f8d-815a-eee766fe4e61" />
+<img width="1280" height="720" alt="account" src="https://github.com/user-attachments/assets/19405860-7c2d-4b33-90ee-63f9f6363916" />
+<img width="1280" height="720" alt="orders-user" src="https://github.com/user-attachments/assets/186b6f62-56f8-4479-930d-7d1320856389" />
+<img width="1280" height="720" alt="chcekout" src="https://github.com/user-attachments/assets/663540ba-c96e-47f2-929c-c8c3f7c82ac8" />
+<img width="1280" height="720" alt="products-user" src="https://github.com/user-attachments/assets/d7b88fa5-86b5-4f26-bbd3-59a60124957a" />
+<img width="1280" height="720" alt="index" src="https://github.com/user-attachments/assets/eb73130c-3256-4872-922c-c72a33ae0439" />
+<img width="1280" height="720" alt="products" src="https://github.com/user-attachments/assets/85c60934-beba-4600-8e69-04c59dd1dd2e" />
+<img width="1280" height="720" alt="orders" src="https://github.com/user-attachments/assets/c18a76c5-23e8-4325-b59b-935ed490fe3d" />
+<img width="1280" height="720" alt="s-dash2" src="https://github.com/user-attachments/assets/ce7e5dfc-ed61-4a58-8f52-5b7a3e8c2d9d" />
+<img width="1280" height="720" alt="s-dash1" src="https://github.com/user-attachments/assets/ab6358cb-c444-4e0b-8548-bbfe3b8aa3a6" />
+<img width="1280" height="720" alt="dash1" src="https://github.com/user-attachments/assets/cb0422c6-c529-4757-ba46-7618220542fb" />
+<img width="1920" height="720" alt="dash2" src="https://github.com/user-attachments/assets/663331ef-6408-4987-87f8-c2050649ff05" />
 
 
 ## What This Project Includes
