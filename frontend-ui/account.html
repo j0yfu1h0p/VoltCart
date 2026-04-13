@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Account</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap");
+      :root {
+        --bg: #edf3f8;
+        --ink: #112334;
+        --muted: #546575;
+        --line: #d2dce4;
+        --accent: #00695c;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 0 0, #ffd7b8 0, transparent 33%), var(--bg);
+      }
+      .wrap { width: min(1200px, 92vw); margin: 0 auto; padding: 0 16px; }
+      .top { padding: 18px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; }
+      .top h1 { margin: 0; font-size: 1.4rem; flex: 0 0 auto; }
+      .top > div:last-child { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+      .top a { text-decoration: none; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; font-size: .9rem; white-space: nowrap; }
+      .top a:hover { background: #f9fafb; }
+      .hamburger { background: none; border: none; font-size: 1.5rem; cursor: pointer; display: none; padding: 4px; }
+      .hamburger:hover { background: #f9fafb; border-radius: 6px; }
+      @media (max-width: 900px) { .hamburger { display: block; } .top > div:last-child { display: none; } }
+      
+      /* Sidebar Drawer */
+      .sidebar { position: fixed; left: 0; top: 0; width: 280px; height: 100vh; background: #fff; border-right: 1px solid var(--line); overflow-y: auto; z-index: 1000; transform: translateX(-100%); transition: transform 300ms ease; }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-header { padding: 18px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+      .sidebar-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--ink); }
+      .sidebar-nav { display: flex; flex-direction: column; gap: 0; }
+      .sidebar-nav button { background: none; border: none; border-bottom: 1px solid var(--line); padding: 16px; text-align: left; color: var(--ink); font-weight: 600; cursor: pointer; transition: background 200ms; font-size: .95rem; }
+      .sidebar-nav button:hover { background: #f9fafb; }
+      .sidebar-nav button.active { background: var(--accent); color: #fff; border-bottom: 1px solid var(--accent); }
+      .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999; }
+      .sidebar-overlay.open { display: block; }
+      
+      /* Main Content Area */
+      .container { display: flex; gap: 20px; margin-top: 20px; }
+      .content { flex: 1; }
+      @media (max-width: 900px) { .container { flex-direction: column; } }
+      
+      .notif-bar { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+      .notif-count { background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 8px; font-size: .85rem; font-weight: 600; }
+      .notif-toggle { background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 600; }
+      .notif-actions { display: flex; align-items: center; gap: 8px; }
+
+      .account-global-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin: 8px 0 14px;
+      }
+
+      .account-shell {
+        display: grid;
+        grid-template-columns: 230px 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .account-nav {
+        position: sticky;
+        top: 78px;
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 12px;
+        padding: 8px;
+      }
+
+      .account-nav button {
+        width: 100%;
+        text-align: left;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .account-nav button:last-child { margin-bottom: 0; }
+      .account-nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .account-block[hidden] { display: none !important; }
+      
+      .notif-panel { border: 1px solid var(--line); background: #fff; border-radius: 12px; margin-bottom: 20px; max-height: 400px; overflow-y: auto; }
+      .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+      .notif-item:last-child { border-bottom: none; }
+      .notif-item.unread { background: #f0fdf4; }
+      .notif-content { flex: 1; }
+      .notif-title { font-weight: 600; font-size: .95rem; }
+      .notif-msg { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+      .notif-time { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+      .notif-mark { background: none; border: none; color: var(--accent); cursor: pointer; padding: 4px 8px; }
+      .notif-empty { padding: 20px; text-align: center; color: var(--muted); font-size: .9rem; }
+      
+      .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+      .panel { border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 20px; }
+      .panel h2 { margin-top: 0; margin-bottom: 16px; font-size: 1.3rem; }
+      .panel h3 { margin-top: 20px; margin-bottom: 12px; font-size: 1.05rem; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+      
+      label { display: block; margin-bottom: 12px; color: var(--muted); font-size: .92rem; }
+      input, select { width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
+      input:focus { outline: none; border-color: var(--accent); }
+      
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .full { grid-column: 1 / -1; }
+      
+      .btn { border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; background: #fff; color: var(--ink); cursor: pointer; font-weight: 600; font-size: .9rem; }
+      .btn:hover { background: #f9fafb; }
+      .btn.primary { background: var(--ink); color: #fff; border: none; }
+      .btn.primary:hover { background: #1f2937; }
+      .btn.danger { background: var(--danger); color: #fff; border: none; }
+      .btn.danger:hover { background: #dc2626; }
+      .btn.success { background: var(--success); color: #fff; border: none; }
+      .btn.success:hover { background: #059669; }
+      .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+      
+      .info { background: #f0fdf4; border: 1px solid var(--success); border-radius: 10px; padding: 12px; font-size: .9rem; color: var(--ink); margin-bottom: 12px; }
+      .error { background: #fef2f2; border: 1px solid var(--danger); border-radius: 10px; padding: 12px; font-size: .9rem; color: var(--danger); margin-bottom: 12px; }
+      
+      .session-item { background: #f9fafb; border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+      .session-info { flex: 1; }
+      .session-ua { font-size: .85rem; color: var(--muted); font-family: IBM Plex Mono, monospace; }
+      .session-ip { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+      
+      .orders-section { grid-column: 1 / -1; }
+      .search-box { display: flex; gap: 8px; margin-bottom: 16px; }
+      .search-box input { flex: 1; }
+      .order-list { display: grid; gap: 12px; }
+      .order-card { background: #f9fafb; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+      .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+      .order-id { font-weight: 600; font-family: IBM Plex Mono, monospace; font-size: .9rem; }
+      .order-status { font-size: .8rem; padding: 4px 8px; border-radius: 6px; }
+      .status-pending { background: #fef3c7; color: #92400e; }
+      .status-paid { background: #d1fae5; color: #065f46; }
+      .status-shipped { background: #dbeafe; color: #0c4a6e; }
+      .status-delivered { background: #d1fae5; color: #065f46; }
+      .status-cancelled { background: #fee2e2; color: #7f1d1d; }
+      .status-refund_requested { background: #fef3c7; color: #92400e; }
+      .status-refunded { background: #fee2e2; color: #7f1d1d; }
+      .refund-note { margin-top: 8px; color: #92400e; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 7px 10px; font-size: .84rem; font-weight: 600; }
+      .refund-done { margin-top: 8px; color: #7f1d1d; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 7px 10px; font-size: .84rem; font-weight: 700; }
+      
+      .order-items { font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
+      .order-amount { font-weight: 600; font-size: .95rem; }
+      .copy-btn { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; color: var(--accent); cursor: pointer; font-size: .8rem; }
+      .copy-btn:hover { background: #f9fafb; }
+      .refund-btn { margin-top: 8px; border: 0; border-radius: 8px; padding: 7px 10px; background: var(--warning); color: #111827; font-weight: 700; cursor: pointer; }
+      .refund-btn:disabled { opacity: .55; cursor: not-allowed; }
+      
+      .mono { font-family: "IBM Plex Mono", monospace; }
+      
+      @media (max-width: 900px) {
+        .account-global-actions { margin-top: 0; }
+        .account-shell { grid-template-columns: 1fr; }
+        .account-nav {
+          position: static;
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+        }
+        .account-nav button {
+          width: auto;
+          flex: 0 0 auto;
+          margin-bottom: 0;
+          white-space: nowrap;
+        }
+        .layout, .grid { grid-template-columns: 1fr; }
+        .orders-section { grid-column: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="account-global-actions">
+        <button class="btn danger" id="logoutBtn" style="padding: 8px 12px;">Logout</button>
+      </div>
+
+      <div class="account-shell">
+        <aside class="account-nav" aria-label="Account sections">
+          <button type="button" data-view-btn="orders" class="active">Orders</button>
+          <button type="button" data-view-btn="account">Account</button>
+          <button type="button" data-view-btn="notifications">Notifications</button>
+          <button type="button" data-view-btn="sessions">Sessions</button>
+        </aside>
+
+        <section>
+      <!-- Notifications Bar -->
+      <div class="notif-bar account-block" data-view="notifications" hidden>
+        <div>📢 <strong>Notifications</strong> <span class="notif-count" id="notifCount">0</span></div>
+        <div class="notif-actions">
+          <button class="notif-toggle" id="toggleNotifPanel">Show</button>
+        </div>
+      </div>
+
+      <!-- Notifications Panel -->
+      <div class="notif-panel account-block" data-view="notifications" id="notifPanel" style="display: none;" hidden>
+        <div id="notifList"></div>
+      </div>
+
+      <div class="layout account-block" data-view="account">
+        <!-- Profile Section -->
+        <article class="panel">
+          <h2>Profile</h2>
+          <label>Full Name<input id="fullName" type="text" /></label>
+          <label>Email<input id="email" type="email" /></label>
+          <label>Account Status<input id="status" type="text" readonly style="background: #f9fafb;" /></label>
+          <label>Two-Factor<input id="twoFa" type="text" readonly style="background: #f9fafb;" /></label>
+          <label style="display:flex; align-items:center; gap:10px; margin-top: 4px;">
+            <input id="magicLinkRequired" type="checkbox" style="width:auto; margin-top:0;" />
+            Require magic-link-only login for added security
+          </label>
+          <div class="btn-group">
+            <button class="btn primary" id="updateProfileBtn">Update Profile</button>
+            <button class="btn danger" id="deleteAccountBtn">Delete Account</button>
+          </div>
+          <div id="profileMsg"></div>
+        </article>
+
+        <!-- Password & Security -->
+        <article class="panel">
+          <h2>Security</h2>
+          
+          <h3>Change Password</h3>
+          <label>Current Password<input id="currentPass" type="password" /></label>
+          <label>New Password<input id="newPass" type="password" /></label>
+          <label>Confirm Password<input id="confirmPass" type="password" /></label>
+          <button class="btn primary" id="changePassBtn" style="width: 100%;">Update Password</button>
+          <div id="passMsg"></div>
+
+          <h3>Two-Factor Authentication</h3>
+          <div id="twoFaSection"></div>
+        </article>
+      </div>
+
+      <!-- Sessions -->
+      <article class="panel account-block" data-view="sessions" hidden>
+        <h2>Active Sessions</h2>
+        <p style="color: var(--muted); font-size: .9rem;">Manage your login sessions across devices</p>
+        <div id="sessionsList"></div>
+        <button class="btn danger" id="logoutAllBtn" style="margin-top: 12px;">Logout All Sessions</button>
+        <div id="sessionMsg"></div>
+      </article>
+
+      <!-- Orders History -->
+      <article class="panel orders-section account-block" data-view="orders" hidden>
+        <h2>Order History</h2>
+        <div class="search-box">
+          <input type="text" id="orderSearch" placeholder="Search by tracking ID, order ID, or product..." />
+          <select id="statusFilter" style="width: auto; min-width: 150px;">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="out_for_delivery">Out for Delivery</option>
+            <option value="delivered">Delivered</option>
+            <option value="refund_requested">Refund Requested</option>
+            <option value="refunded">Refunded</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="order-list" id="orderList"></div>
+        <div id="ordersMsg"></div>
+      </article>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const token = localStorage.getItem("auth_token") || "";
+      const user = JSON.parse(localStorage.getItem("auth_user") || "null");
+      const isJwtExpired = (jwt) => {
+        try {
+          const payload = JSON.parse(atob((jwt || "").split(".")[1] || ""));
+          return !payload.exp || Date.now() >= payload.exp * 1000;
+        } catch {
+          return true;
+        }
+      };
+
+      if (!token || !user || isJwtExpired(token)) {
+        localStorage.removeItem("auth_token");
+        location.href = "login.html?redirect=account.html";
+      }
+
+      const apiBase = "http://localhost:3000";
+      const headers = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+      // UI Elements
+      const fullNameInput = document.getElementById("fullName");
+      const emailInput = document.getElementById("email");
+      const statusInput = document.getElementById("status");
+      const twoFaInput = document.getElementById("twoFa");
+      const magicLinkRequiredInput = document.getElementById("magicLinkRequired");
+      
+      const currentPassInput = document.getElementById("currentPass");
+      const newPassInput = document.getElementById("newPass");
+      const confirmPassInput = document.getElementById("confirmPass");
+      
+      const profileMsg = document.getElementById("profileMsg");
+      const passMsg = document.getElementById("passMsg");
+      const sessionMsg = document.getElementById("sessionMsg");
+      const ordersMsg = document.getElementById("ordersMsg");
+      
+      const notifCount = document.getElementById("notifCount");
+      const notifPanel = document.getElementById("notifPanel");
+      const notifList = document.getElementById("notifList");
+      const toggleNotifPanel = document.getElementById("toggleNotifPanel");
+      const sectionButtons = document.querySelectorAll("[data-view-btn]");
+      const sectionBlocks = document.querySelectorAll(".account-block");
+      let cachedOrders = [];
+
+      const setActiveView = (view) => {
+        sectionButtons.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.viewBtn === view);
+        });
+        sectionBlocks.forEach((block) => {
+          block.hidden = block.dataset.view !== view;
+        });
+      };
+
+      sectionButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setActiveView(btn.dataset.viewBtn));
+      });
+
+      const requestedView = new URLSearchParams(location.search).get("view");
+      const allowedViews = new Set(["orders", "account", "notifications", "sessions"]);
+      setActiveView(allowedViews.has(requestedView) ? requestedView : "orders");
+
+      // Initialize page
+      fullNameInput.value = user.full_name || "";
+      emailInput.value = user.email || "";
+      statusInput.value = user.account_status || "";
+      twoFaInput.value = user.two_factor_enabled ? "Enabled" : "Disabled";
+      magicLinkRequiredInput.checked = Boolean(user.magic_link_login_required);
+      let currentProfile = {
+        full_name: (user.full_name || "").trim(),
+        email: (user.email || "").trim().toLowerCase(),
+        magic_link_login_required: Boolean(user.magic_link_login_required),
+      };
+
+      // Logout
+      document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+        e.preventDefault();
+        const refreshToken = localStorage.getItem("auth_refresh_token");
+        if (refreshToken) {
+          await fetch(`${apiBase}/auth/logout`, {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          }).catch(() => {});
+        }
+        localStorage.clear();
+        location.href = "login.html";
+      });
+
+      // Update Profile
+      document.getElementById("updateProfileBtn").addEventListener("click", async () => {
+        const nextProfile = {
+          full_name: fullNameInput.value.trim(),
+          email: emailInput.value.trim().toLowerCase(),
+          magic_link_login_required: Boolean(magicLinkRequiredInput.checked),
+        };
+
+        if (
+          nextProfile.full_name === currentProfile.full_name &&
+          nextProfile.email === currentProfile.email &&
+          nextProfile.magic_link_login_required ===
+            currentProfile.magic_link_login_required
+        ) {
+          profileMsg.innerHTML = `<div class="info">No changes to save</div>`;
+          setTimeout(() => { profileMsg.innerHTML = ""; }, 2000);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${apiBase}/auth/me`, {
+            method: "PATCH",
+            headers: headers(),
+            body: JSON.stringify(nextProfile),
+          });
+          const data = await res.json();
+          if (data.success) {
+            profileMsg.innerHTML = `<div class="info">✓ Profile updated</div>`;
+            localStorage.setItem("auth_user", JSON.stringify(data.data));
+            currentProfile = {
+              full_name: (data.data?.full_name || nextProfile.full_name).trim(),
+              email: (data.data?.email || nextProfile.email).trim().toLowerCase(),
+              magic_link_login_required: Boolean(
+                data.data?.magic_link_login_required ??
+                  nextProfile.magic_link_login_required,
+              ),
+            };
+            magicLinkRequiredInput.checked =
+              currentProfile.magic_link_login_required;
+            setTimeout(() => { profileMsg.innerHTML = ""; }, 3000);
+          } else {
+            profileMsg.innerHTML = `<div class="error">✗ ${data.message}</div>`;
+          }
+        } catch (err) {
+          profileMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+        }
+      });
+
+      // Delete Account
+      document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
+        if (!confirm("Are you sure? This cannot be undone.")) return;
+        try {
+          const res = await fetch(`${apiBase}/auth/me`, {
+            method: "DELETE",
+            headers: headers(),
+          });
+          const data = await res.json();
+          if (data.success) {
+            localStorage.clear();
+            location.href = "login.html";
+          } else {
+            profileMsg.innerHTML = `<div class="error">✗ ${data.message}</div>`;
+          }
+        } catch (err) {
+          profileMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+        }
+      });
+
+      // Change Password
+      document.getElementById("changePassBtn").addEventListener("click", async () => {
+        if (!currentPassInput.value || !newPassInput.value || !confirmPassInput.value) {
+          passMsg.innerHTML = `<div class="error">✗ All fields required</div>`;
+          return;
+        }
+        if (newPassInput.value !== confirmPassInput.value) {
+          passMsg.innerHTML = `<div class="error">✗ Passwords don't match</div>`;
+          return;
+        }
+        try {
+          const res = await fetch(`${apiBase}/auth/change-password`, {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({
+              current_password: currentPassInput.value,
+              new_password: newPassInput.value,
+              confirm_password: confirmPassInput.value,
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            passMsg.innerHTML = `<div class="info">✓ Password changed</div>`;
+            currentPassInput.value = "";
+            newPassInput.value = "";
+            confirmPassInput.value = "";
+            setTimeout(() => { passMsg.innerHTML = ""; }, 3000);
+          } else {
+            passMsg.innerHTML = `<div class="error">✗ ${data.message}</div>`;
+          }
+        } catch (err) {
+          passMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+        }
+      });
+
+      // 2FA Management
+      const loadTwoFa = async () => {
+        const container = document.getElementById("twoFaSection");
+        if (user.two_factor_enabled) {
+          container.innerHTML = `
+            <p style="color: var(--muted); font-size: .9rem;">Two-factor is currently <strong>enabled</strong></p>
+            <label>Current Password<input id="disableTwoFaPass" type="password" /></label>
+            <label>2FA Code<input id="disableTwoFaCode" type="text" maxlength="6" /></label>
+            <button class="btn danger" id="disableTwoFaBtn" style="width: 100%;">Disable 2FA</button>
+            <div id="twoFaMsg"></div>
+          `;
+          document.getElementById("disableTwoFaBtn").addEventListener("click", async () => {
+            const pass = document.getElementById("disableTwoFaPass").value;
+            const code = document.getElementById("disableTwoFaCode").value;
+            if (!pass || !code) {
+              document.getElementById("twoFaMsg").innerHTML = `<div class="error">✗ All fields required</div>`;
+              return;
+            }
+            try {
+              const res = await fetch(`${apiBase}/auth/2fa/disable`, {
+                method: "POST",
+                headers: headers(),
+                body: JSON.stringify({ current_password: pass, code }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                document.getElementById("twoFaMsg").innerHTML = `<div class="info">✓ 2FA disabled</div>`;
+                user.two_factor_enabled = false;
+                localStorage.setItem("auth_user", JSON.stringify(user));
+                setTimeout(() => { loadTwoFa(); }, 2000);
+              } else {
+                document.getElementById("twoFaMsg").innerHTML = `<div class="error">✗ ${data.message}</div>`;
+              }
+            } catch (err) {
+              document.getElementById("twoFaMsg").innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+            }
+          });
+        } else {
+          container.innerHTML = `
+            <p style="color: var(--muted); font-size: .9rem;">Two-factor is currently <strong>disabled</strong></p>
+            <button class="btn success" id="enableTwoFaBtn" style="width: 100%;">Enable 2FA Setup</button>
+            <div id="twoFaMsg"></div>
+          `;
+          document.getElementById("enableTwoFaBtn").addEventListener("click", async () => {
+            try {
+              const res = await fetch(`${apiBase}/auth/2fa/enable`, {
+                method: "POST",
+                headers: headers(),
+              });
+              const data = await res.json();
+              if (data.success) {
+                const qr = data.data.otpauth_url;
+                document.getElementById("twoFaMsg").innerHTML = `
+                  <div class="info" style="margin-top: 12px;">
+                    <strong>Scan this with your authenticator app:</strong><br/>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qr)}" style="margin-top: 8px; max-width: 200px;" />
+                    <p style="margin: 8px 0; word-break: break-all; font-family: IBM Plex Mono, monospace; font-size: .8rem;">${data.data.secret}</p>
+                    <input type="text" id="twoFaVerifyCode" placeholder="Enter 6-digit code" maxlength="6" style="margin-bottom: 8px;" />
+                    <button class="btn success" id="verifyTwoFaBtn" style="width: 100%;">Verify & Enable</button>
+                  </div>
+                `;
+                document.getElementById("verifyTwoFaBtn").addEventListener("click", async () => {
+                  const code = document.getElementById("twoFaVerifyCode").value;
+                  if (!code || code.length !== 6) {
+                    alert("Invalid code");
+                    return;
+                  }
+                  try {
+                    const verifyRes = await fetch(`${apiBase}/auth/2fa/verify`, {
+                      method: "POST",
+                      headers: headers(),
+                      body: JSON.stringify({ code }),
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (verifyData.success) {
+                      user.two_factor_enabled = true;
+                      localStorage.setItem("auth_user", JSON.stringify(user));
+                      alert("2FA enabled successfully");
+                      loadTwoFa();
+                    } else {
+                      alert(`Error: ${verifyData.message}`);
+                    }
+                  } catch (err) {
+                    alert(`Error: ${err.message}`);
+                  }
+                });
+              }
+            } catch (err) {
+              document.getElementById("twoFaMsg").innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+            }
+          });
+        }
+      };
+      loadTwoFa();
+
+      // Load Sessions
+      const loadSessions = async () => {
+        document.getElementById("sessionsList").innerHTML = Array.from({ length: 3 }, () => `
+          <div class="session-item">
+            <div class="session-info" style="width:100%;">
+              <span class="skeleton" style="height:16px;width:42%;"></span>
+              <span class="skeleton" style="height:14px;width:78%;margin-top:8px;"></span>
+              <span class="skeleton" style="height:14px;width:52%;margin-top:6px;"></span>
+            </div>
+          </div>
+        `).join("");
+
+        try {
+          const res = await fetch(`${apiBase}/auth/sessions`, { headers: headers() });
+          const data = await res.json();
+          if (data.success) {
+            const container = document.getElementById("sessionsList");
+            if (!data.data || data.data.length === 0) {
+              container.innerHTML = `<div style="color: var(--muted); text-align: center; padding: 20px;">No active sessions</div>`;
+              return;
+            }
+            container.innerHTML = data.data.map((s, i) => `
+              <div class="session-item">
+                <div class="session-info">
+                  <div><strong>Session ${i + 1}</strong></div>
+                  <div class="session-ua">${s.user_agent || "Unknown device"}</div>
+                  <div class="session-ip">IP: ${s.ip_address || "N/A"}</div>
+                  <div style="font-size: .8rem; color: var(--muted); margin-top: 4px;">${new Date(s.createdAt).toLocaleDateString()} ${new Date(s.createdAt).toLocaleTimeString()}</div>
+                </div>
+                <button class="btn danger" onClick="deleteSession('${s.session_id}')">Delete</button>
+              </div>
+            `).join("");
+          }
+        } catch (err) {
+          sessionMsg.innerHTML = `<div class="error">✗ Error loading sessions: ${err.message}</div>`;
+        }
+      };
+      loadSessions();
+
+      window.deleteSession = async (sessionId) => {
+        try {
+          const res = await fetch(`${apiBase}/auth/sessions/${sessionId}`, {
+            method: "DELETE",
+            headers: headers(),
+          });
+          const data = await res.json();
+          if (data.success) {
+            sessionMsg.innerHTML = `<div class="info">✓ Session deleted</div>`;
+            loadSessions();
+            setTimeout(() => { sessionMsg.innerHTML = ""; }, 2000);
+          }
+        } catch (err) {
+          sessionMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+        }
+      };
+
+      document.getElementById("logoutAllBtn").addEventListener("click", async () => {
+        if (!confirm("Logout all sessions?")) return;
+        try {
+          const res = await fetch(`${apiBase}/auth/sessions`, {
+            method: "DELETE",
+            headers: headers(),
+          });
+          const data = await res.json();
+          if (data.success) {
+            sessionMsg.innerHTML = `<div class="info">✓ All sessions logged out. Redirecting...</div>`;
+            setTimeout(() => {
+              localStorage.clear();
+              location.href = "login.html";
+            }, 2000);
+          }
+        } catch (err) {
+          sessionMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+        }
+      });
+
+      // Load Notifications
+      const loadNotifications = async () => {
+        notifList.innerHTML = Array.from({ length: 4 }, () => `
+          <div class="notif-item">
+            <div class="notif-content" style="width:100%;">
+              <span class="skeleton" style="height:16px;width:48%;"></span>
+              <span class="skeleton" style="height:14px;width:90%;margin-top:8px;"></span>
+              <span class="skeleton" style="height:12px;width:30%;margin-top:8px;"></span>
+            </div>
+          </div>
+        `).join("");
+
+        try {
+          const res = await fetch(`${apiBase}/notifications?limit=20`, { headers: headers() });
+          const data = await res.json();
+          if (data.success && data.data) {
+            const unreadCount = data.data.filter(n => !n.is_read).length;
+            notifCount.textContent = unreadCount > 0 ? unreadCount : "0";
+            
+            if (data.data.length === 0) {
+              notifList.innerHTML = `<div class="notif-empty">No notifications</div>`;
+            } else {
+              notifList.innerHTML = data.data.map(n => `
+                <div class="notif-item ${!n.is_read ? 'unread' : ''}">
+                  <div class="notif-content">
+                    <div class="notif-title">${n.title}</div>
+                    <div class="notif-msg">${n.message}</div>
+                    <div class="notif-time">${new Date(n.createdAt).toLocaleString()}</div>
+                  </div>
+                  ${!n.is_read ? `<button class="notif-mark" onClick="markNotifRead('${n._id}')">Mark read</button>` : ''}
+                </div>
+              `).join("");
+            }
+          }
+        } catch (err) {
+          console.error("Error loading notifications:", err);
+        }
+      };
+      loadNotifications();
+      setInterval(loadNotifications, 30000);
+
+      window.markNotifRead = async (notifId) => {
+        try {
+          await fetch(`${apiBase}/notifications/${notifId}/read`, {
+            method: "PATCH",
+            headers: headers(),
+          });
+          loadNotifications();
+        } catch (err) {
+          console.error("Error marking notification:", err);
+        }
+      };
+
+      toggleNotifPanel.addEventListener("click", () => {
+        const isHidden = notifPanel.style.display === "none";
+        notifPanel.style.display = isHidden ? "block" : "none";
+        toggleNotifPanel.textContent = isHidden ? "Hide" : "Show";
+      });
+
+      // Load Orders
+      const loadOrders = async (force = false) => {
+        if (!force && cachedOrders.length > 0) {
+          renderOrders(cachedOrders);
+          return;
+        }
+
+        document.getElementById("orderList").innerHTML = Array.from({ length: 3 }, () => `
+          <div class="order-card">
+            <span class="skeleton" style="height:16px;width:42%;"></span>
+            <span class="skeleton" style="height:13px;width:30%;margin-top:8px;"></span>
+            <span class="skeleton" style="height:13px;width:90%;margin-top:8px;"></span>
+            <span class="skeleton" style="height:13px;width:55%;margin-top:8px;"></span>
+            <span class="skeleton" style="height:30px;width:36%;margin-top:10px;"></span>
+          </div>
+        `).join("");
+
+        try {
+          const res = await fetch(`${apiBase}/orders`, { headers: headers() });
+          const data = await res.json();
+          if (data.success && data.data) {
+            cachedOrders = data.data;
+            renderOrders(cachedOrders);
+          }
+        } catch (err) {
+          ordersMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+        }
+      };
+
+      const renderOrders = (orders) => {
+        const searchTerm = document.getElementById("orderSearch").value.toLowerCase();
+        const statusFilter = document.getElementById("statusFilter").value;
+        
+        let filtered = orders.filter(o => {
+          const orderId = o.id || o._id || o.order_id || "";
+          const refundStatus =
+            o.refund_status ||
+            (o.payment_status === "refunded"
+              ? "approved"
+              : (o.refund_requested ? "requested" : "none"));
+          const matchSearch = !searchTerm || 
+            (o.tracking_id && o.tracking_id.toLowerCase().includes(searchTerm)) ||
+            (orderId && orderId.toLowerCase().includes(searchTerm)) ||
+            (o.items || []).some(item => (item.name && item.name.toLowerCase().includes(searchTerm)));
+          const matchStatus = !statusFilter ||
+            (statusFilter === "refund_requested" && refundStatus === "requested") ||
+            (statusFilter === "refunded" && o.payment_status === "refunded") ||
+            o.order_status === statusFilter;
+          return matchSearch && matchStatus;
+        });
+
+        if (filtered.length === 0) {
+          document.getElementById("orderList").innerHTML = `<div style="text-align: center; color: var(--muted); padding: 20px;">No orders found</div>`;
+          return;
+        }
+
+        document.getElementById("orderList").innerHTML = filtered.map((o) => {
+          const orderId = o.id || o._id || o.order_id || "";
+          const totalCents = Number(o.total_amount ?? o.amount?.total ?? 0);
+          const createdAt = o.createdAt || o.created_at;
+          const status = String(o.order_status || "").toLowerCase();
+          const refundStatus =
+            o.refund_status ||
+            (o.payment_status === "refunded"
+              ? "approved"
+              : (o.refund_requested ? "requested" : "none"));
+          const isDeliveredOrDone = ["delivered", "done"].includes(status);
+          const canRequestRefund =
+            o.payment_status === "succeeded" &&
+            refundStatus === "none" &&
+            !["delivered", "done", "cancelled"].includes(status);
+          const statusClass = o.payment_status === "refunded"
+            ? "status-refunded"
+            : (refundStatus === "requested" ? "status-refund_requested" : `status-${o.order_status}`);
+          const statusLabel = o.payment_status === "refunded"
+            ? "refunded"
+            : (refundStatus === "requested"
+              ? "refund requested"
+              : refundStatus === "rejected"
+                ? "refund rejected"
+                : (o.order_status || "unknown"));
+          return `
+            <div class="order-card">
+              <div class="order-header">
+                <div>
+                  <div class="order-id">📦 ${o.tracking_id || 'N/A'}</div>
+                  <div style="font-size: .8rem; color: var(--muted);">Order ID: <span class="mono">${orderId ? orderId.substring(0, 12) + '...' : 'N/A'}</span>
+                    <button class="copy-btn" onClick="copyToClipboard('${orderId}')">📋 Copy</button>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div class="order-status ${statusClass}">${statusLabel}</div>
+                  <div style="font-size: .8rem; color: var(--muted); margin-top: 4px;">Payment: ${o.payment_status}</div>
+                </div>
+              </div>
+              <div class="order-items">
+                ${(o.items || []).map(item => `${item.name} x${item.quantity}`).join(", ")}
+              </div>
+              <div class="order-amount">
+                Total: $${(totalCents / 100).toFixed(2)} | Date: ${createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}
+              </div>
+              ${canRequestRefund ? `<button class="refund-btn" data-action="refund" data-order-id="${orderId}">Request Refund</button>` : ""}
+              ${refundStatus === "requested" ? `<div class="refund-note">Refund requested${o.refund_requested_at ? ` on ${new Date(o.refund_requested_at).toLocaleDateString()}` : ""}. Stripe/bank processing usually takes 5-10 business days after approval.</div>` : ""}
+              ${refundStatus === "rejected" ? `<div style="margin-top:8px;color:#7f1d1d;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:7px 10px;font-size:.84rem;font-weight:700;">Refund request rejected${o.refund_resolution_at ? ` on ${new Date(o.refund_resolution_at).toLocaleDateString()}` : ""}. New refund request is disabled for this order.</div>` : ""}
+              ${o.payment_status === "refunded" ? `<div class="refund-done">Refund completed${o.updated_at ? ` on ${new Date(o.updated_at).toLocaleDateString()}` : ""}. Stripe/bank settlement can take up to 5-10 business days.</div>` : ""}
+              ${o.payment_status === "succeeded" && isDeliveredOrDone && refundStatus !== "requested" ? `<div style="margin-top:8px;color:var(--muted);font-size:.82rem;">Refund is not available after delivery is completed.</div>` : ""}
+              ${o.tracking_id ? `<button class="copy-btn" style="margin-top: 8px;" onClick="copyToClipboard('${o.tracking_id}')">📋 Copy Tracking ID</button>` : ''}
+            </div>
+          `;
+        }).join("");
+      };
+
+      document.getElementById("orderList").addEventListener("click", async (event) => {
+        const refundBtn = event.target.closest("button[data-action='refund']");
+        if (!refundBtn) return;
+
+        const orderId = refundBtn.dataset.orderId;
+        const reason = prompt("Reason for refund request (optional):", "") || "";
+
+        refundBtn.disabled = true;
+        try {
+          const res = await fetch(`${apiBase}/orders/${encodeURIComponent(orderId)}/refund-request`, {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ reason }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            ordersMsg.innerHTML = `<div class="error">✗ ${data.message || "Refund request failed"}</div>`;
+            refundBtn.disabled = false;
+            return;
+          }
+
+          ordersMsg.innerHTML = `<div class="info">✓ ${data.message || "Refund request submitted"}. Stripe/bank processing usually takes 5-10 business days after admin approval.</div>`;
+          await loadOrders(true);
+          setTimeout(() => { ordersMsg.innerHTML = ""; }, 3000);
+        } catch (err) {
+          ordersMsg.innerHTML = `<div class="error">✗ Error: ${err.message}</div>`;
+          refundBtn.disabled = false;
+        }
+      });
+
+      window.copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text).then(() => {
+          alert("Copied to clipboard!");
+        });
+      };
+
+      document.getElementById("orderSearch").addEventListener("input", () => {
+        renderOrders(cachedOrders);
+      });
+      document.getElementById("statusFilter").addEventListener("change", () => {
+        renderOrders(cachedOrders);
+      });
+      loadOrders(true);
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>

@@ -1,0 +1,275 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Checkout</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap");
+      :root {
+        --bg: #edf3f8;
+        --ink: #112334;
+        --muted: #546575;
+        --line: #d2dce4;
+        --accent: #00695c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 0 0, #ffd7b8 0, transparent 33%), var(--bg);
+      }
+      .wrap { width: min(1080px, 92vw); margin: 0 auto; }
+      .top { padding: 18px 0; display: flex; justify-content: space-between; align-items: center; }
+      .top a { text-decoration: none; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; }
+      .layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; }
+      .panel { border: 1px solid var(--line); background: #fff; border-radius: 16px; padding: 16px; }
+      label { display: block; margin-bottom: 10px; color: var(--muted); font-size: .92rem; }
+      input { width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .pay { width: 100%; border: 0; border-radius: 10px; padding: 12px; background: var(--ink); color: #fff; font-weight: 700; cursor: pointer; }
+      .status { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: .85rem; }
+      .mono { font-family: "IBM Plex Mono", monospace; }
+      .line { display: flex; justify-content: space-between; margin: 8px 0; }
+      #paymentElement { margin: 12px 0; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; }
+      @media (max-width: 900px) { .layout, .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="layout">
+        <article class="panel">
+          <h2>Shipping details</h2>
+          <div class="grid">
+            <label>Full name<input id="fullName" /></label>
+            <label>Email<input id="email" type="email" /></label>
+            <label>Phone<input id="phone" /></label>
+            <label>Country<input id="country" value="US" /></label>
+          </div>
+          <label>Address line 1<input id="address1" /></label>
+          <label>Address line 2<input id="address2" /></label>
+          <div class="grid">
+            <label>City<input id="city" /></label>
+            <label>State<input id="state" /></label>
+            <label>Postal code<input id="postal" /></label>
+            <label>Currency<input id="currency" value="usd" /></label>
+          </div>
+
+          <h3>Stripe</h3>
+          <label>Publishable key (optional override)<input id="publishableKey" placeholder="Auto from backend" /></label>
+          <div id="paymentElement"></div>
+          <button class="pay" id="loadBtn">Load payment form</button>
+          <button class="pay" id="confirmBtn" style="margin-top:8px;" disabled>Confirm payment</button>
+          <p class="status" id="status"></p>
+        </article>
+
+        <aside class="panel">
+          <h3>Order summary</h3>
+          <div id="summary"></div>
+          <hr />
+          <div class="line"><span>Subtotal</span><span class="mono" id="subtotal">$0.00</span></div>
+          <div class="line"><span>Shipping</span><span class="mono">$10.00</span></div>
+          <div class="line"><strong>Total</strong><strong class="mono" id="total">$10.00</strong></div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+      const token = localStorage.getItem("auth_token") || "";
+      const user = JSON.parse(localStorage.getItem("auth_user") || "null");
+      const isJwtExpired = (jwt) => {
+        try {
+          const payload = JSON.parse(atob((jwt || "").split(".")[1] || ""));
+          return !payload.exp || Date.now() >= payload.exp * 1000;
+        } catch {
+          return true;
+        }
+      };
+
+      if (!token || !user || isJwtExpired(token)) {
+        localStorage.removeItem("auth_token");
+        location.href = "login.html?redirect=checkout.html";
+      }
+
+      const apiBase = "http://localhost:3000";
+      const statusEl = document.getElementById("status");
+      const summaryEl = document.getElementById("summary");
+      const subtotalEl = document.getElementById("subtotal");
+      const totalEl = document.getElementById("total");
+
+      const fullName = document.getElementById("fullName");
+      const email = document.getElementById("email");
+      const phone = document.getElementById("phone");
+      const address1 = document.getElementById("address1");
+      const address2 = document.getElementById("address2");
+      const city = document.getElementById("city");
+      const state = document.getElementById("state");
+      const postal = document.getElementById("postal");
+      const country = document.getElementById("country");
+      const currency = document.getElementById("currency");
+      const publishableKeyInput = document.getElementById("publishableKey");
+      const loadBtn = document.getElementById("loadBtn");
+      const confirmBtn = document.getElementById("confirmBtn");
+
+      fullName.value = user.full_name || "";
+      email.value = user.email || "";
+      publishableKeyInput.value = localStorage.getItem("stripe_publishable_key") || "";
+
+      const setStatus = (m) => { statusEl.textContent = m || ""; };
+      const headers = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+      let stripeInstance;
+      let elements;
+      let clientSecret = "";
+      let resolvedPublishableKey = "";
+      let trackingId = "";
+      let orderId = "";
+
+      const loadPreview = async () => {
+        summaryEl.innerHTML = Array.from({ length: 3 }, () => `
+          <div class="line">
+            <span class="skeleton" style="height:14px;width:58%"></span>
+            <span class="skeleton" style="height:14px;width:22%"></span>
+          </div>
+        `).join("");
+
+        const response = await fetch(`${apiBase}/orders/preview`, { headers: headers() });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          setStatus(payload.message || "Cannot load checkout preview");
+          return;
+        }
+
+        const items = payload.data.items || [];
+        const subtotal = Number(payload.data.subtotal_amount || 0);
+
+        summaryEl.innerHTML = items.map((item) => `
+          <div class="line">
+            <span>${item.name} x${item.quantity}</span>
+            <span class="mono">$${(Number(item.unit_price) * Number(item.quantity)).toFixed(2)}</span>
+          </div>
+        `).join("");
+
+        subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+        totalEl.textContent = `$${(subtotal + 10).toFixed(2)}`;
+      };
+
+      const createIntent = async () => {
+        const idempotencyKey = crypto.randomUUID();
+        const shipping = {
+          full_name: fullName.value.trim(),
+          email: email.value.trim(),
+          phone: phone.value.trim(),
+          address_line_1: address1.value.trim(),
+          address_line_2: address2.value.trim(),
+          city: city.value.trim(),
+          state: state.value.trim(),
+          postal_code: postal.value.trim(),
+          country: country.value.trim(),
+        };
+
+        const response = await fetch(`${apiBase}/stripe/payment-intents`, {
+          method: "POST",
+          headers: {
+            ...headers(),
+            "x-idempotency-key": idempotencyKey,
+          },
+          body: JSON.stringify({
+            currency: currency.value.trim().toLowerCase(),
+            shipping_details: shipping,
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || "Failed to create payment intent");
+        }
+
+        orderId = payload.data.order_id;
+        trackingId = payload.data.tracking_id;
+        resolvedPublishableKey =
+          publishableKeyInput.value.trim() ||
+          payload.data.publishable_key ||
+          localStorage.getItem("stripe_publishable_key") ||
+          "";
+
+        if (resolvedPublishableKey) {
+          localStorage.setItem("stripe_publishable_key", resolvedPublishableKey);
+          publishableKeyInput.value = resolvedPublishableKey;
+        }
+
+        localStorage.setItem("last_order_tracking_id", trackingId);
+
+        return payload.data.client_secret;
+      };
+
+      loadBtn.addEventListener("click", async () => {
+        try {
+          setStatus("Creating payment intent...");
+
+          const publishableKey =
+            publishableKeyInput.value.trim() ||
+            localStorage.getItem("stripe_publishable_key") ||
+            "";
+          if (!publishableKey) throw new Error("Stripe publishable key is required");
+          if (typeof Stripe === "undefined") throw new Error("Stripe.js is not loaded");
+
+          clientSecret = await createIntent();
+
+          const finalPublishableKey =
+            resolvedPublishableKey ||
+            publishableKey;
+
+          if (!finalPublishableKey) throw new Error("Stripe publishable key is required");
+
+          stripeInstance = Stripe(finalPublishableKey);
+          elements = stripeInstance.elements({ clientSecret });
+          const paymentElement = elements.create("payment");
+          document.getElementById("paymentElement").innerHTML = "";
+          paymentElement.mount("#paymentElement");
+
+          confirmBtn.disabled = false;
+          setStatus(`Payment form loaded. Tracking ID: ${trackingId}`);
+        } catch (error) {
+          setStatus(error.message || "Unable to initialize Stripe form");
+        }
+      });
+
+      confirmBtn.addEventListener("click", async () => {
+        try {
+          if (!stripeInstance || !elements || !clientSecret) {
+            throw new Error("Load payment form first");
+          }
+
+          setStatus("Confirming payment...");
+          const result = await stripeInstance.confirmPayment({ elements, redirect: "if_required" });
+
+          if (result.error) {
+            throw new Error(result.error.message || "Payment failed");
+          }
+
+          const status = result.paymentIntent?.status;
+          if (status === "succeeded" || status === "processing" || status === "requires_capture") {
+            setStatus("Payment submitted. Redirecting to tracking page...");
+            setTimeout(() => {
+              location.href = `tracking.html?tracking_id=${encodeURIComponent(trackingId)}&order_id=${encodeURIComponent(orderId)}`;
+            }, 1000);
+            return;
+          }
+
+          setStatus(`Payment status: ${status || "unknown"}. You can track it from the tracking page.`);
+        } catch (error) {
+          setStatus(error.message || "Unexpected payment error");
+        }
+      });
+
+      loadPreview().catch(() => {
+        setStatus("Network error while loading checkout preview");
+      });
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>

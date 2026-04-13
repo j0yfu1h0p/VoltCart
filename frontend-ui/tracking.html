@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Order Tracking</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap");
+      :root {
+        --bg: #f0f4eb;
+        --ink: #1b2a21;
+        --muted: #617164;
+        --line: #d3dfd1;
+        --accent: #bf360c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 100% 100%, #ffd8b7 0, transparent 35%), var(--bg);
+      }
+      .wrap { width: min(980px, 92vw); margin: 0 auto; }
+      .top { padding: 18px 0; display: flex; justify-content: space-between; align-items: center; }
+      .top a { text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 999px; background: #fff; padding: 8px 12px; }
+      .panel { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 14px; margin-bottom: 12px; }
+      label { display: block; color: var(--muted); }
+      input { width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
+      button { margin-top: 10px; border: 0; border-radius: 9px; background: var(--ink); color: #fff; padding: 10px 12px; cursor: pointer; }
+      .mono { font-family: "IBM Plex Mono", monospace; }
+      .status { font-weight: 700; color: var(--accent); }
+      .timeline-item { border-left: 3px solid var(--line); margin: 9px 0; padding-left: 10px; }
+      .msg { color: var(--accent); font-size: .86rem; font-family: "IBM Plex Mono", monospace; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="panel">
+        <h2>Track order</h2>
+        <label>Tracking ID
+          <input id="trackingId" placeholder="TRK-20260412-ABC123" />
+        </label>
+        <button id="trackBtn">Fetch order status</button>
+        <p id="message" class="msg"></p>
+      </section>
+
+      <section class="panel" id="details" style="display:none;"></section>
+    </main>
+
+    <script>
+      const token = localStorage.getItem("auth_token") || "";
+      if (!token) {
+        location.href = "login.html?redirect=tracking.html";
+      }
+
+      const apiBase = "http://localhost:3000";
+      const trackingEl = document.getElementById("trackingId");
+      const detailsEl = document.getElementById("details");
+      const messageEl = document.getElementById("message");
+
+      const presetTracking = new URLSearchParams(location.search).get("tracking_id") || localStorage.getItem("last_order_tracking_id") || "";
+      trackingEl.value = presetTracking;
+
+      const setMessage = (m) => { messageEl.textContent = m || ""; };
+      const headers = () => ({ Authorization: `Bearer ${token}` });
+
+      const renderOrder = (order) => {
+        const issue = order.issue_flag && order.issue_flag.type !== "none"
+          ? `<p><strong>Issue:</strong> ${order.issue_flag.message}</p>`
+          : "";
+
+        const timeline = (order.timeline || []).map((entry) => `
+          <div class="timeline-item">
+            <div><strong>${entry.status}</strong></div>
+            <div>${entry.message}</div>
+            <div class="mono">${new Date(entry.created_at).toLocaleString()}</div>
+          </div>
+        `).join("");
+
+        detailsEl.innerHTML = `
+          <h3>Order ${order.tracking_id}</h3>
+          <p class="status">Status: ${order.order_status_label}</p>
+          <p><strong>Payment status:</strong> ${order.payment_status}</p>
+          <p><strong>Total:</strong> <span class="mono">${order.amount.total} ${order.amount.currency.toUpperCase()}</span></p>
+          <p><strong>Transaction:</strong> <span class="mono">${order.transaction_id || order.payment_intent_id || "N/A"}</span></p>
+          ${issue}
+          <h4>Timeline</h4>
+          ${timeline || "<p>No timeline events yet</p>"}
+        `;
+
+        detailsEl.style.display = "block";
+      };
+
+      const fetchTracking = async () => {
+        const trackingId = trackingEl.value.trim();
+        if (!trackingId) {
+          setMessage("Tracking ID is required");
+          return;
+        }
+
+        setMessage("Fetching tracking details...");
+        detailsEl.style.display = "block";
+        detailsEl.innerHTML = `
+          <span class="skeleton" style="height:24px;width:48%"></span>
+          <span class="skeleton" style="height:16px;width:36%;margin-top:8px;"></span>
+          <span class="skeleton" style="height:16px;width:42%;margin-top:8px;"></span>
+          <span class="skeleton" style="height:16px;width:50%;margin-top:8px;"></span>
+          <div style="margin-top:10px;display:grid;gap:8px;">
+            <span class="skeleton" style="height:44px;width:100%"></span>
+            <span class="skeleton" style="height:44px;width:100%"></span>
+            <span class="skeleton" style="height:44px;width:100%"></span>
+          </div>
+        `;
+
+        const response = await fetch(`${apiBase}/orders/tracking/${encodeURIComponent(trackingId)}`, {
+          headers: headers(),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          setMessage(payload.message || "Could not fetch order tracking");
+          detailsEl.style.display = "none";
+          return;
+        }
+
+        setMessage("");
+        renderOrder(payload.data);
+      };
+
+      document.getElementById("trackBtn").addEventListener("click", fetchTracking);
+
+      if (presetTracking) {
+        fetchTracking().catch(() => {
+          setMessage("Network error while fetching order");
+        });
+      }
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>

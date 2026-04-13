@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "types": ["node", "express"]
+  },
+  "include": ["src/**/*.js", "configs/**/*.js", "controllers/**/*.js", "middleware/**/*.js", "models/**/*.js", "routes/**/*.js", "utils/**/*.js"]
+}

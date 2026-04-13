@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Login</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+      :root {
+        --bg: #eef3f5;
+        --ink: #102231;
+        --muted: #5f6f7c;
+        --line: #d7e0e6;
+        --accent: #00695c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 20% 10%, #ffddb5 0, transparent 40%),
+          radial-gradient(circle at 100% 100%, #b8f2ec 0, transparent 40%),
+          var(--bg);
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+      .card {
+        width: min(480px, 100%);
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 18px;
+        padding: 22px;
+      }
+      h1 { margin-top: 0; }
+      p { color: var(--muted); }
+      label { display: block; margin-bottom: 12px; }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 11px;
+        font: inherit;
+      }
+      .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .btn {
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--ink);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      a { color: var(--accent); text-decoration: none; }
+      .ghost {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 12px;
+        color: var(--ink);
+        background: #fff;
+      }
+      .msg { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; color: var(--accent); }
+      .row2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+      .secondary-btn { border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; background: #fff; color: var(--ink); font-weight: 600; cursor: pointer; }
+      .magic-card {
+        border: 1px dashed var(--accent);
+        background: #f3fffd;
+        border-radius: 12px;
+        padding: 12px;
+        margin-top: 12px;
+      }
+      .magic-card p { margin: 0 0 8px; color: var(--ink); font-size: 0.92rem; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="row">
+        <a class="ghost" href="index.html">Back to store</a>
+        <a href="signup.html">Create account</a>
+      </div>
+      <h1>Login</h1>
+      <p>Sign in to continue shopping and manage your orders.</p>
+      <p><a href="forgot-password.html">Forgot password?</a></p>
+
+      <form id="loginForm">
+        <label>
+          Email
+          <input id="email" type="email" required placeholder="you@example.com" />
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" required placeholder="********" />
+        </label>
+        <label id="otpWrap" style="display:none;">
+          2FA Code
+          <input id="otpCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" />
+        </label>
+        <button class="btn" type="submit">Sign in</button>
+      </form>
+
+      <div id="magicVerifyWrap" class="magic-card" style="display:none;">
+        <p>Magic link detected. Continue to sign in securely.</p>
+        <button type="button" class="btn" id="magicVerifyBtn">Continue with magic link</button>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <label>Need a magic link?
+          <div class="row2">
+            <input id="magicEmail" type="email" placeholder="you@example.com" />
+            <button type="button" class="secondary-btn" id="magicRequestBtn">Send Link</button>
+          </div>
+        </label>
+      </div>
+
+      <p id="status" class="msg"></p>
+    </main>
+
+    <script>
+      const form = document.getElementById("loginForm");
+      const statusEl = document.getElementById("status");
+      const redirectTo = new URLSearchParams(location.search).get("redirect");
+      const apiBaseUrl = "http://localhost:3000";
+      const otpWrap = document.getElementById("otpWrap");
+      const otpCodeInput = document.getElementById("otpCode");
+      const magicRequestBtn = document.getElementById("magicRequestBtn");
+      const magicEmailInput = document.getElementById("magicEmail");
+      const magicVerifyWrap = document.getElementById("magicVerifyWrap");
+      const magicVerifyBtn = document.getElementById("magicVerifyBtn");
+      const magicTokenFromUrl = new URLSearchParams(location.search).get("magic_token");
+
+      const completeLogin = (result) => {
+        localStorage.setItem("auth_user", JSON.stringify({
+          id: result.data?.user_id,
+          full_name: result.data?.full_name,
+          email: result.data?.email,
+          role: result.data?.role || "user",
+          account_status: result.data?.account_status,
+          email_verified: result.data?.email_verified,
+          two_factor_enabled: result.data?.two_factor_enabled,
+        }));
+        localStorage.setItem("auth_token", result.token || "");
+        localStorage.setItem("auth_refresh_token", result.refresh_token || "");
+        if (result.remember_me_token) {
+          localStorage.setItem("remember_me_token", result.remember_me_token);
+        }
+
+        statusEl.textContent = "Login successful. Redirecting...";
+        setTimeout(() => {
+          location.href = redirectTo || "account.html";
+        }, 550);
+      };
+
+      const tryMagicVerifyFromUrl = async (apiBaseUrl) => {
+        if (!magicTokenFromUrl) return;
+
+        statusEl.textContent = "Magic link detected. Click continue to sign in.";
+        magicVerifyWrap.style.display = "block";
+
+        magicVerifyBtn.onclick = async () => {
+          statusEl.textContent = "Verifying magic link...";
+          magicVerifyBtn.disabled = true;
+
+          const response = await fetch(`${apiBaseUrl}/auth/magic-link/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: magicTokenFromUrl }),
+          });
+
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result?.success) {
+            statusEl.textContent = result.message || "Magic-link token is invalid or expired";
+            magicVerifyBtn.disabled = false;
+            return;
+          }
+
+          completeLogin(result);
+        };
+      };
+
+      const initMagicFromUrl = async () => {
+        if (magicTokenFromUrl) {
+          magicVerifyWrap.style.display = "block";
+          statusEl.textContent = "Magic link detected. Click continue to sign in.";
+        }
+        await tryMagicVerifyFromUrl(apiBaseUrl);
+      };
+
+      initMagicFromUrl().catch(() => {});
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value.trim().toLowerCase();
+        const password = document.getElementById("password").value;
+        const otp_code = otpCodeInput.value.trim();
+        statusEl.textContent = "Signing in...";
+
+        const response = await fetch(`${apiBaseUrl}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password,
+            ...(otp_code ? { otp_code } : {}),
+            ...(localStorage.getItem("remember_me_token") ? { remember_me_token: localStorage.getItem("remember_me_token") } : {}),
+          }),
+        });
+
+        const responseText = await response.text();
+        let result = {};
+
+        try {
+          result = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          statusEl.textContent = responseText || "Unexpected response from server.";
+          return;
+        }
+
+        if (!response.ok || !result?.success) {
+          if (response.status === 401 && /two-factor code is required/i.test(result.message || "")) {
+            otpWrap.style.display = "block";
+            otpCodeInput.required = true;
+            statusEl.textContent = "2FA is enabled. Enter your 6-digit code.";
+            otpCodeInput.focus();
+            return;
+          }
+          if (response.status === 403 && /magic-link login/i.test(result.message || "")) {
+            magicEmailInput.value = email;
+            statusEl.textContent = "This account uses magic-link-only login. Click Send Link.";
+            magicRequestBtn.focus();
+            return;
+          }
+          statusEl.textContent = result.message || "Invalid credentials.";
+          return;
+        }
+
+        completeLogin(result);
+      });
+
+      magicRequestBtn.addEventListener("click", async () => {
+        const email = magicEmailInput.value.trim().toLowerCase() || document.getElementById("email").value.trim().toLowerCase();
+        if (!email) {
+          statusEl.textContent = "Enter your email to request magic link.";
+          return;
+        }
+
+        statusEl.textContent = "Sending magic link...";
+        const response = await fetch(`${apiBaseUrl}/auth/magic-link/request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result?.success) {
+          statusEl.textContent = result.message || "Could not send magic link.";
+          return;
+        }
+
+        statusEl.textContent = "If your account exists, a magic link was sent to your email.";
+      });
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>

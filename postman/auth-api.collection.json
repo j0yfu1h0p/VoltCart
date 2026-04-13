@@ -1,0 +1,347 @@
+{
+  "info": {
+    "name": "Proj-1 E-commerce API",
+    "_postman_id": "3282b9f2-c7db-4572-a9c2-97a8e1f56fbc",
+    "description": "Complete Postman suite for auth, users, products, cart, Stripe payments, orders, tracking, ledger, and admin operations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "api_base", "value": "http://localhost:3000" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "admin_access_token", "value": "" },
+    { "key": "user_id", "value": "" },
+    { "key": "product_id", "value": "" },
+    { "key": "order_id", "value": "" },
+    { "key": "tracking_id", "value": "" },
+    { "key": "payment_intent_id", "value": "" },
+    { "key": "idempotency_key", "value": "test-key-001" },
+    { "key": "test_email", "value": "shopper@example.com" },
+    { "key": "test_password", "value": "Pass@12345" }
+  ],
+  "item": [
+    {
+      "name": "Auth Routes",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Test Shopper\",\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{api_base}}/auth/register"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const d = pm.response.json();", "if (d.token) pm.collectionVariables.set('access_token', d.token);", "if (d.refresh_token) pm.collectionVariables.set('refresh_token', d.refresh_token);", "if (d.data?.user_id) pm.collectionVariables.set('user_id', d.data.user_id);"] } }],
+          "response": [
+            { "name": "201 Created", "status": "Created", "code": 201, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"message\": \"User registered successfully\"\n}" },
+            { "name": "409 Exists", "status": "Conflict", "code": 409, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"User already exists\"\n}" }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{api_base}}/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const d = pm.response.json();", "if (d.token) pm.collectionVariables.set('access_token', d.token);", "if (d.refresh_token) pm.collectionVariables.set('refresh_token', d.refresh_token);"] } }],
+          "response": [
+            { "name": "200 OK", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\"\n}" },
+            { "name": "404 Invalid", "status": "Not Found", "code": 404, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"User not found or invalid credentials\"\n}" }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/auth/me"
+          },
+          "response": [
+            { "name": "200 Me", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": {\n    \"email\": \"shopper@example.com\"\n  }\n}" },
+            { "name": "401 Unauthorized", "status": "Unauthorized", "code": 401, "_postman_previewlanguage": "json", "body": "{\n  \"message\": \"Invalid or expired token\"\n}" }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{api_base}}/auth/refresh-token"
+          },
+          "response": [
+            { "name": "200 Refreshed", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true\n}" },
+            { "name": "401 Bad Refresh", "status": "Unauthorized", "code": 401, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Product Routes",
+      "item": [
+        {
+          "name": "List Products",
+          "request": { "method": "GET", "url": "{{api_base}}/products?search=desk" },
+          "response": [
+            { "name": "200 Products", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": []\n}" },
+            { "name": "500 Error", "status": "Internal Server Error", "code": 500, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        },
+        {
+          "name": "Create Product (Admin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Arc Keyboard\",\n  \"description\": \"Mechanical keyboard\",\n  \"price\": 129.99,\n  \"stock\": 45\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{api_base}}/products"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const d = pm.response.json();", "if (d.data?._id) pm.collectionVariables.set('product_id', d.data._id);"] } }],
+          "response": [
+            { "name": "201 Product Created", "status": "Created", "code": 201, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"message\": \"Product created\"\n}" },
+            { "name": "403 Admin Required", "status": "Forbidden", "code": 403, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"Admin access required\"\n}" }
+          ]
+        },
+        {
+          "name": "Update Product (Admin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 119.99,\n  \"stock\": 40\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{api_base}}/products/{{product_id}}"
+          },
+          "response": [
+            { "name": "200 Updated", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true\n}" },
+            { "name": "400 Invalid", "status": "Bad Request", "code": 400, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        },
+        {
+          "name": "Delete Product (Admin)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "DELETE",
+            "url": "{{api_base}}/products/{{product_id}}"
+          },
+          "response": [
+            { "name": "200 Deleted", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true\n}" },
+            { "name": "404 Not Found", "status": "Not Found", "code": 404, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart Routes",
+      "item": [
+        {
+          "name": "Add Item",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 2\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{api_base}}/c/cart/items"
+          },
+          "response": [
+            { "name": "200 Added", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true\n}" },
+            { "name": "400 Quantity Error", "status": "Bad Request", "code": 400, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"quantity must be a positive integer\"\n}" }
+          ]
+        },
+        {
+          "name": "Get Cart",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/c/cart"
+          },
+          "response": [
+            { "name": "200 Cart", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": {\n    \"items\": []\n  }\n}" },
+            { "name": "401 Unauthorized", "status": "Unauthorized", "code": 401, "_postman_previewlanguage": "json", "body": "{\n  \"message\": \"Invalid or expired token\"\n}" }
+          ]
+        },
+        {
+          "name": "Update Quantity",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 3\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{api_base}}/c/cart/items/{{product_id}}"
+          },
+          "response": [
+            { "name": "200 Updated", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true\n}" },
+            { "name": "404 Missing", "status": "Not Found", "code": 404, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        },
+        {
+          "name": "Remove Item",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "DELETE",
+            "url": "{{api_base}}/c/cart/items/{{product_id}}"
+          },
+          "response": [
+            { "name": "200 Removed", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true\n}" },
+            { "name": "400 Invalid", "status": "Bad Request", "code": 400, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment Routes",
+      "item": [
+        {
+          "name": "Create Payment Intent",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "{{idempotency_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"usd\",\n  \"shipping_details\": {\n    \"full_name\": \"Test Shopper\",\n    \"email\": \"shopper@example.com\",\n    \"phone\": \"+1-555-001\",\n    \"address_line_1\": \"44 Main St\",\n    \"address_line_2\": \"Apt 3\",\n    \"city\": \"Austin\",\n    \"state\": \"TX\",\n    \"postal_code\": \"73301\",\n    \"country\": \"US\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{api_base}}/stripe/payment-intents"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const d = pm.response.json();", "if (d.data?.payment_intent_id) pm.collectionVariables.set('payment_intent_id', d.data.payment_intent_id);", "if (d.data?.tracking_id) pm.collectionVariables.set('tracking_id', d.data.tracking_id);", "if (d.data?.order_id) pm.collectionVariables.set('order_id', d.data.order_id);"] } }],
+          "response": [
+            { "name": "201 Intent", "status": "Created", "code": 201, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": {\n    \"payment_intent_id\": \"pi_123\",\n    \"client_secret\": \"pi_123_secret_456\"\n  }\n}" },
+            { "name": "400 Missing Idempotency", "status": "Bad Request", "code": 400, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"x-idempotency-key header is required\"\n}" }
+          ]
+        },
+        {
+          "name": "List My Orders",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/orders"
+          },
+          "response": [
+            { "name": "200 Orders", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": []\n}" },
+            { "name": "401 Unauthorized", "status": "Unauthorized", "code": 401, "_postman_previewlanguage": "json", "body": "{\n  \"message\": \"Invalid or expired token\"\n}" }
+          ]
+        },
+        {
+          "name": "Track My Order",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/orders/tracking/{{tracking_id}}"
+          },
+          "response": [
+            { "name": "200 Tracking", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": {\n    \"tracking_id\": \"TRK-20260412-ABC123\",\n    \"order_status\": \"paid\"\n  }\n}" },
+            { "name": "404 Not Found", "status": "Not Found", "code": 404, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"Order not found\"\n}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes",
+      "item": [
+        {
+          "name": "List Orders",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/admin/orders?status=paid&limit=50"
+          },
+          "response": [
+            { "name": "200 Admin Orders", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": []\n}" },
+            { "name": "403 Forbidden", "status": "Forbidden", "code": 403, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"Admin access required\"\n}" }
+          ]
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "admin-status-update-1" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"dispatched\",\n  \"issue_type\": \"none\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{api_base}}/admin/orders/{{order_id}}/status"
+          },
+          "response": [
+            { "name": "200 Status Updated", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"message\": \"Order updated\"\n}" },
+            { "name": "400 Invalid Status", "status": "Bad Request", "code": 400, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"Invalid status\"\n}" }
+          ]
+        },
+        {
+          "name": "Create Refund",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "refund-001" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{api_base}}/stripe/refunds/{{payment_intent_id}}"
+          },
+          "response": [
+            { "name": "201 Refund", "status": "Created", "code": 201, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": {\n    \"refund_id\": \"re_123\"\n  }\n}" },
+            { "name": "404 Transaction Missing", "status": "Not Found", "code": 404, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false,\n  \"message\": \"Transaction not found\"\n}" }
+          ]
+        },
+        {
+          "name": "List Ledger",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/admin/ledger?limit=100"
+          },
+          "response": [
+            { "name": "200 Ledger", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": []\n}" },
+            { "name": "403 Forbidden", "status": "Forbidden", "code": 403, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        },
+        {
+          "name": "List Payments",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/admin/payments?limit=100"
+          },
+          "response": [
+            { "name": "200 Payments", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": []\n}" },
+            { "name": "403 Forbidden", "status": "Forbidden", "code": 403, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        },
+        {
+          "name": "List Webhook Logs",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{api_base}}/admin/webhooks?limit=100"
+          },
+          "response": [
+            { "name": "200 Webhooks", "status": "OK", "code": 200, "_postman_previewlanguage": "json", "body": "{\n  \"success\": true,\n  \"data\": []\n}" },
+            { "name": "403 Forbidden", "status": "Forbidden", "code": 403, "_postman_previewlanguage": "json", "body": "{\n  \"success\": false\n}" }
+          ]
+        }
+      ]
+    }
+  ]
+}

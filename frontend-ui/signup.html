@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Sign Up</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+      :root {
+        --bg: #f2f7ee;
+        --ink: #152320;
+        --muted: #5e6d66;
+        --line: #d5ddd7;
+        --accent: #c2410c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background:
+          radial-gradient(circle at 5% 0%, #c9f4ea 0, transparent 35%),
+          radial-gradient(circle at 100% 100%, #ffdcb8 0, transparent 40%),
+          var(--bg);
+        color: var(--ink);
+        font-family: "Space Grotesk", sans-serif;
+      }
+      .card {
+        width: min(520px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fff;
+        padding: 22px;
+      }
+      .top { display: flex; justify-content: space-between; align-items: center; }
+      a { text-decoration: none; color: var(--accent); }
+      .ghost {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink);
+        padding: 8px 12px;
+      }
+      label { display: block; margin-bottom: 12px; }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 11px;
+        font: inherit;
+      }
+      .btn {
+        width: 100%;
+        border: 0;
+        background: var(--ink);
+        color: #fff;
+        border-radius: 10px;
+        padding: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .msg { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-size: 0.86rem; }
+      .check { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 12px; }
+      .check input { width: auto; margin-top: 2px; }
+      .check span { color: var(--muted); font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Create account</h1>
+      <p>Create your account to save cart items and track deliveries.</p>
+
+      <form id="signupForm">
+        <label>
+          Full name
+          <input id="fullName" required placeholder="John Doe" />
+        </label>
+        <label>
+          Email
+          <input id="email" type="email" required placeholder="John@example.com" />
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" minlength="6" required placeholder="min 6 characters" />
+        </label>
+        <label class="check">
+          <input id="magicLinkRequired" type="checkbox" />
+          <span>Require magic-link login for future sign-ins (extra security).</span>
+        </label>
+        <button class="btn" type="submit">Create account</button>
+      </form>
+
+      <p id="status" class="msg"></p>
+    </main>
+
+    <script>
+      const form = document.getElementById("signupForm");
+      const statusEl = document.getElementById("status");
+      const redirectTo = new URLSearchParams(location.search).get("redirect");
+      const apiBaseUrl = "http://localhost:3000";
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const full_name = document.getElementById("fullName").value.trim();
+        const email = document.getElementById("email").value.trim().toLowerCase();
+        const password = document.getElementById("password").value;
+        const magic_link_login_required = document.getElementById("magicLinkRequired").checked;
+        statusEl.textContent = "Creating account...";
+
+        const response = await fetch(`${apiBaseUrl}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ full_name, email, password, magic_link_login_required }),
+        });
+
+        const responseText = await response.text();
+        let result = {};
+
+        try {
+          result = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          statusEl.textContent = responseText || "Unexpected response from server.";
+          return;
+        }
+
+        if (!response.ok || !result?.success) {
+          statusEl.textContent = result.message || "Could not create account.";
+          return;
+        }
+
+        localStorage.setItem("auth_user", JSON.stringify({
+          id: result.data?.user_id,
+          full_name: result.data?.full_name,
+          email: result.data?.email,
+          role: result.data?.role || "user",
+          magic_link_login_required: Boolean(result.data?.magic_link_login_required),
+        }));
+        localStorage.setItem("auth_token", result.token || "");
+        localStorage.setItem("auth_refresh_token", result.refresh_token || "");
+
+        statusEl.textContent = "Account created. Redirecting...";
+        setTimeout(() => {
+          location.href = redirectTo || "account.html";
+        }, 550);
+      });
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>

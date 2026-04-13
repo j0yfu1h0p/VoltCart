@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Admin</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap");
+
+      :root {
+        --bg: #f1efe7;
+        --panel: #fff;
+        --ink: #1e2624;
+        --muted: #5e6b67;
+        --line: #d7d2c6;
+        --accent: #0b6e4f;
+        --danger: #b42318;
+        --success: #0b6e4f;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        min-height: 100vh;
+      }
+
+      .loading-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        z-index: 1300;
+        background: transparent;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .loading-bar::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -35%;
+        width: 35%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, #0b6e4f, transparent);
+      }
+
+      .loading-bar.active::before {
+        animation: loading-run 900ms linear infinite;
+      }
+
+      @keyframes loading-run {
+        from { left: -35%; }
+        to { left: 100%; }
+      }
+
+      .sidebar {
+        background: linear-gradient(180deg, #2a3a30 0, #1e2624 100%);
+        color: #fff;
+        padding: 16px 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 240px;
+        overflow-y: auto;
+        border-right: 1px solid var(--line);
+        z-index: 1100;
+      }
+
+      .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .sidebar-nav button {
+        background: none;
+        border: none;
+        color: #aaa;
+        padding: 12px 16px;
+        text-align: left;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: all 140ms;
+      }
+
+      .sidebar-nav button:hover {
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+      }
+
+      .sidebar-nav button.active {
+        background: rgba(11, 110, 79, 0.2);
+        color: #fff;
+        border-left-color: var(--accent);
+      }
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+      }
+
+      .top a {
+        text-decoration: none;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: #fff;
+        font-size: 0.85rem;
+      }
+
+      .main-container {
+        margin-left: 240px;
+        min-height: 100vh;
+        padding-top: 10px;
+        overflow-y: auto;
+        background: radial-gradient(circle at 100% 0, #ffd6b3 0, transparent 30%), var(--bg);
+      }
+
+      .wrap { width: min(100%, 100%); margin: 0; padding: 0 16px; }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        padding: 14px;
+        margin-bottom: 12px;
+        display: none;
+      }
+
+      .panel.active { display: block; }
+
+      .panel h2 { margin-top: 0; }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .analytics-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .chart-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      .chart-card h3 {
+        margin: 0 0 10px;
+        font-size: 0.96rem;
+      }
+
+      .bars {
+        display: grid;
+        gap: 8px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: 122px 1fr 54px;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+      }
+
+      .bar-track {
+        background: #eef3f0;
+        border-radius: 999px;
+        height: 9px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #0b6e4f, #35a37f);
+      }
+
+      .donut-wrap {
+        display: grid;
+        place-items: center;
+        gap: 10px;
+      }
+
+      .donut {
+        width: 168px;
+        height: 168px;
+        border-radius: 50%;
+        background: conic-gradient(#0b6e4f 0 40%, #f3a73a 40% 70%, #d6d6d6 70% 100%);
+        position: relative;
+      }
+
+      .donut::after {
+        content: "";
+        position: absolute;
+        inset: 24px;
+        border-radius: 50%;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+
+      .donut-center {
+        position: absolute;
+        z-index: 2;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.88rem;
+        color: var(--ink);
+      }
+
+      .legend {
+        display: grid;
+        gap: 6px;
+        width: 100%;
+      }
+
+      .legend-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      .insights {
+        margin-top: 12px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      .insights h3 {
+        margin: 0 0 8px;
+        font-size: 0.94rem;
+      }
+
+      .insights-list {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .stat-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+      }
+
+      .stat-card .big {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin: 8px 0;
+      }
+
+      .stat-card .label {
+        color: var(--muted);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      input, select, textarea {
+        width: 100%;
+        margin-top: 6px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 9px;
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 9px 12px;
+        cursor: pointer;
+        background: var(--ink);
+        color: #fff;
+        font-weight: 600;
+        margin: 4px 0;
+      }
+
+      button.secondary {
+        background: #fff;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+
+      button.danger { background: var(--danger); }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .row > button,
+      .row > select {
+        margin: 4px 0;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .msg {
+        color: var(--accent);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.84rem;
+        margin: 8px 0 0;
+      }
+
+      .mono { font-family: "IBM Plex Mono", monospace; }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 720px;
+      }
+
+      th, td {
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        padding: 8px;
+        vertical-align: top;
+        font-size: 0.83rem;
+      }
+
+      th { color: var(--muted); font-weight: 700; background: #fafafa; }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .badge.success { background: #e8f5e9; color: var(--success); }
+      .badge.pending { background: #fff3e0; color: #f57c00; }
+      .badge.failed { background: #ffebee; color: var(--danger); }
+      .badge.refunded { background: #f3e5f5; color: #7b1fa2; }
+      .badge.warn { background: #fff4e5; color: #9a6700; }
+
+      .prod-thumb {
+        width: 52px;
+        height: 52px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #f5f5f5;
+      }
+
+      .skeleton {
+        display: inline-block;
+        width: 100%;
+        height: 16px;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #efefef 25%, #f8f8f8 50%, #efefef 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.2s ease-in-out infinite;
+      }
+
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1400;
+        padding: 16px;
+      }
+
+      .modal-overlay.open { display: flex; }
+
+      .modal-card {
+        width: min(460px, 95vw);
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      .modal-title { margin: 0 0 6px; }
+      .modal-text { margin: 0; color: var(--muted); }
+      .modal-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+
+      @media (max-width: 900px) {
+        .grid, .grid-3 { grid-template-columns: 1fr; }
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .analytics-grid { grid-template-columns: 1fr; }
+        .filters { grid-template-columns: 1fr; }
+        .sidebar {
+          width: 100%;
+          height: auto;
+          position: static;
+        }
+        .main-container { margin-left: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loadingBar" class="loading-bar"></div>
+    <div id="appModal" class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title" id="modalTitle">Notice</h3>
+        <p class="modal-text" id="modalText"></p>
+        <div class="modal-actions">
+          <button id="modalCloseBtn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-header">VoltCart Admin</div>
+      <nav class="sidebar-nav">
+        <button data-section="dashboard" class="active">📊 Dashboard</button>
+        <button data-section="orders">📦 Orders</button>
+        <button data-section="payments">💳 Payments</button>
+        <button data-section="products">🛍️ Products</button>
+        <button data-section="ledger">📊 Ledger</button>
+        <button data-section="webhooks">🔔 Webhooks</button>
+        <button data-section="refund">↩️ Refunds</button>
+      </nav>
+    </aside>
+
+    <div class="main-container">
+      <div class="wrap">
+        <section class="panel active" id="dashboard">
+          <h1>Admin Dashboard</h1>
+          <div class="row" style="margin-top:10px;">
+            <button class="secondary" id="reloadAllBtn">⟳ Reload all data</button>
+          </div>
+
+          <div class="stats-grid" id="statsContainer"></div>
+          <div class="analytics-grid">
+            <article class="chart-card">
+              <h3>Order Status Spread</h3>
+              <div class="bars" id="orderStatusBars"></div>
+            </article>
+            <article class="chart-card">
+              <h3>Payment Health</h3>
+              <div class="donut-wrap">
+                <div class="donut" id="paymentDonut">
+                  <span class="donut-center" id="paymentDonutCenter">0 tx</span>
+                </div>
+                <div class="legend" id="paymentLegend"></div>
+              </div>
+            </article>
+          </div>
+          <article class="insights">
+            <h3>Operational Insights</h3>
+            <ol class="insights-list" id="insightsList"></ol>
+          </article>
+        </section>
+
+        <section class="panel" id="orders">
+          <h2>Orders and status</h2>
+          <div class="filters">
+            <label>Search by tracking/email<input id="ordersSearch" placeholder="TRK or email" /></label>
+            <label>Order status
+              <select id="ordersStatusFilter">
+                <option value="">All</option>
+                <option value="pending">pending</option>
+                <option value="paid">paid</option>
+                <option value="processing">processing</option>
+                <option value="shipped">shipped</option>
+                <option value="out_for_delivery">Out for delivery</option>
+                <option value="delivered">delivered</option>
+                <option value="cancelled">cancelled</option>
+                <option value="dispatched">dispatched</option>
+              </select>
+            </label>
+            <label>Payment status
+              <select id="ordersPaymentFilter">
+                <option value="">All</option>
+                <option value="requires_payment_method">Requires payment method</option>
+                <option value="succeeded">succeeded</option>
+                <option value="failed">failed</option>
+                <option value="refunded">refunded</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <button id="loadOrdersBtn">Refresh orders</button>
+          </div>
+          <div class="table-wrap" style="margin-top:10px;">
+            <table>
+              <thead><tr><th>Tracking</th><th>User Email</th><th>Order Status</th><th>Payment</th><th>Refund Request</th><th>Total</th><th>Actions</th></tr></thead>
+              <tbody id="ordersTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="payments">
+          <h2>Payments Detail</h2>
+          <div class="filters">
+            <label>Search by email/intent<input id="paymentsSearch" placeholder="email or intent" /></label>
+            <label>Status
+              <select id="paymentsStatusFilter">
+                <option value="">All</option>
+                <option value="succeeded">succeeded</option>
+                <option value="failed">failed</option>
+                <option value="refunded">refunded</option>
+                <option value="processing">processing</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <button id="loadPaymentsBtn">Refresh payments</button>
+          </div>
+          <div class="table-wrap" style="margin-top:10px;">
+            <table>
+              <thead><tr><th>User</th><th>Email</th><th>Amount</th><th>Status</th><th>Order</th><th>Intent ID</th><th>Date</th></tr></thead>
+              <tbody id="paymentsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="products">
+          <h2>Product CRUD</h2>
+          <div class="filters">
+            <label>Search products<input id="productsSearch" placeholder="name" /></label>
+            <label>Stock
+              <select id="productsStockFilter">
+                <option value="">All</option>
+                <option value="in">In stock</option>
+                <option value="out">Out of stock</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-3">
+            <label>Name<input id="pName" /></label>
+            <label>Price<input id="pPrice" type="number" step="0.01" /></label>
+            <label>Stock<input id="pStock" type="number" /></label>
+          </div>
+          <label style="margin-top:8px;">Image URL
+            <input id="pImageUrl" placeholder="https://example.com/product.jpg" />
+          </label>
+          <label style="margin-top:8px;">Description
+            <textarea id="pDescription" rows="2"></textarea>
+          </label>
+          <div class="row">
+            <button id="createProductBtn">Create product</button>
+            <button class="secondary" id="loadProductsBtn">Refresh products</button>
+          </div>
+          <div class="table-wrap" style="margin-top:10px;">
+            <table>
+              <thead><tr><th>Image</th><th>ID</th><th>Name</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+              <tbody id="productsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="ledger">
+          <h2>Transaction Ledger</h2>
+          <div class="filters">
+            <label>Search tracking/email<input id="ledgerSearch" placeholder="tracking or email" /></label>
+            <label>Payment status
+              <select id="ledgerPaymentFilter">
+                <option value="">All</option>
+                <option value="succeeded">succeeded</option>
+                <option value="failed">failed</option>
+                <option value="refunded">refunded</option>
+                <option value="requires_payment_method">Requires payment method</option>
+              </select>
+            </label>
+          </div>
+          <div class="row"><button id="loadLedgerBtn">Refresh ledger</button></div>
+          <div class="table-wrap" style="margin-top:10px;">
+            <table>
+              <thead><tr><th>Event</th><th>Tracking</th><th>User Email</th><th>Amount</th><th>Payment Status</th><th>Timestamp</th></tr></thead>
+              <tbody id="ledgerTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="webhooks">
+          <h2>Stripe Webhook Logs</h2>
+          <div class="filters">
+            <label>Search event id/type<input id="webhooksSearch" placeholder="event id or type" /></label>
+            <label>Processing status
+              <select id="webhooksStatusFilter">
+                <option value="">All</option>
+                <option value="processed">processed</option>
+                <option value="pending">pending</option>
+                <option value="failed">failed</option>
+              </select>
+            </label>
+          </div>
+          <div class="row"><button id="loadWebhooksBtn">Refresh webhooks</button></div>
+          <div class="table-wrap" style="margin-top:10px;">
+            <table>
+              <thead><tr><th>Event ID</th><th>Type</th><th>Status</th><th>Error</th><th>Created</th></tr></thead>
+              <tbody id="webhooksTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="refund">
+          <h2>Create Refund</h2>
+          <div class="grid">
+            <label>Payment Intent ID<input id="refundIntentId" /></label>
+            <label>Amount in cents (optional)<input id="refundAmount" type="number" /></label>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button class="danger" id="refundBtn">Create refund</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("auth_user") || "null");
+      const savedToken = localStorage.getItem("auth_token") || "";
+      if (!user || !savedToken) {
+        location.href = "login.html?redirect=admin.html";
+      }
+
+      const globalMsg = document.getElementById("globalMsg");
+      const ordersSearchEl = document.getElementById("ordersSearch");
+      const ordersStatusFilterEl = document.getElementById("ordersStatusFilter");
+      const ordersPaymentFilterEl = document.getElementById("ordersPaymentFilter");
+      const paymentsSearchEl = document.getElementById("paymentsSearch");
+      const paymentsStatusFilterEl = document.getElementById("paymentsStatusFilter");
+      const productsSearchEl = document.getElementById("productsSearch");
+      const productsStockFilterEl = document.getElementById("productsStockFilter");
+      const ledgerSearchEl = document.getElementById("ledgerSearch");
+      const ledgerPaymentFilterEl = document.getElementById("ledgerPaymentFilter");
+      const webhooksSearchEl = document.getElementById("webhooksSearch");
+      const webhooksStatusFilterEl = document.getElementById("webhooksStatusFilter");
+      const loadingBar = document.getElementById("loadingBar");
+      const appModal = document.getElementById("appModal");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalText = document.getElementById("modalText");
+
+      const setMsg = (text) => {
+        if (!globalMsg) return;
+        globalMsg.textContent = text || "";
+      };
+
+      let cachedOrders = [];
+      let cachedPayments = [];
+      let cachedProducts = [];
+      let cachedLedger = [];
+      let cachedWebhooks = [];
+      const showModal = (title, text) => {
+        modalTitle.textContent = title || "Notice";
+        modalText.textContent = text || "";
+        appModal.classList.add("open");
+      };
+
+      document.getElementById("modalCloseBtn").addEventListener("click", () => {
+        appModal.classList.remove("open");
+      });
+
+      appModal.addEventListener("click", (event) => {
+        if (event.target === appModal) {
+          appModal.classList.remove("open");
+        }
+      });
+
+      let activeRequests = 0;
+      const startLoading = () => {
+        activeRequests += 1;
+        loadingBar.classList.add("active");
+      };
+
+      const stopLoading = () => {
+        activeRequests = Math.max(0, activeRequests - 1);
+        if (activeRequests === 0) {
+          loadingBar.classList.remove("active");
+        }
+      };
+
+      const renderSkeletonRows = (tbodyId, cols, rows = 5) => {
+        const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = Array.from({ length: rows }, () => `
+          <tr>${Array.from({ length: cols }, () => `<td><span class="skeleton"></span></td>`).join("")}</tr>
+        `).join("");
+      };
+
+      const renderDashboardSkeleton = () => {
+        document.getElementById("statsContainer").innerHTML = Array.from({ length: 4 }, () => `
+          <div class="stat-card">
+            <span class="skeleton" style="height:12px;width:56%"></span>
+            <span class="skeleton" style="height:30px;width:46%;margin:10px auto 0;"></span>
+          </div>
+        `).join("");
+
+        document.getElementById("orderStatusBars").innerHTML = Array.from({ length: 5 }, () => `
+          <div class="bar-row">
+            <span class="skeleton" style="height:12px;width:85px"></span>
+            <span class="skeleton" style="height:9px;border-radius:999px"></span>
+            <span class="skeleton" style="height:12px;width:30px"></span>
+          </div>
+        `).join("");
+
+        document.getElementById("paymentDonut").style.background = "#eef2f4";
+        document.getElementById("paymentDonutCenter").textContent = "...";
+        document.getElementById("paymentLegend").innerHTML = Array.from({ length: 3 }, () => `
+          <div class="legend-row">
+            <span class="skeleton" style="height:12px;width:82px"></span>
+            <span class="skeleton" style="height:12px;width:20px"></span>
+          </div>
+        `).join("");
+
+        document.getElementById("insightsList").innerHTML = Array.from({ length: 3 }, () => `
+          <li><span class="skeleton" style="height:13px;width:96%"></span></li>
+        `).join("");
+      };
+
+      // Sidebar navigation
+      const sectionNavButtons = document.querySelectorAll("[data-section]");
+      const panels = document.querySelectorAll(".panel");
+      const ADMIN_LAST_SECTION_KEY = "admin_last_section";
+
+      const switchSection = (sectionId) => {
+        panels.forEach(p => p.classList.remove("active"));
+        sectionNavButtons.forEach(b => b.classList.remove("active"));
+        
+        document.getElementById(sectionId).classList.add("active");
+        document.querySelector(`[data-section="${sectionId}"]`).classList.add("active");
+        localStorage.setItem(ADMIN_LAST_SECTION_KEY, sectionId);
+      };
+
+      sectionNavButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          switchSection(btn.dataset.section);
+        });
+      });
+
+      const savedSection = localStorage.getItem(ADMIN_LAST_SECTION_KEY);
+      if (savedSection && document.getElementById(savedSection)) {
+        switchSection(savedSection);
+      }
+
+      const getApiBase = () => "http://localhost:3000";
+
+      const getToken = () => savedToken;
+
+      const api = async (path, options = {}) => {
+        const base = getApiBase();
+        const token = getToken();
+        startLoading();
+        try {
+          const response = await fetch(`${base}${path}`, {
+            ...options,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              ...(options.headers || {}),
+            },
+          });
+
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data.success === false) {
+            const msg = data.message || `Request failed ${response.status}`;
+            showModal("Request failed", msg);
+            throw new Error(msg);
+          }
+          return data;
+        } catch (error) {
+          if (!(error instanceof Error)) {
+            showModal("Network error", "Something went wrong while contacting the server");
+          }
+          throw error;
+        } finally {
+          stopLoading();
+        }
+      };
+
+      const verifyAdmin = async () => {
+        const me = await api("/auth/me", { method: "GET" });
+        if (me?.data?.role !== "admin") {
+          throw new Error("This account is not admin");
+        }
+      };
+
+      const prettyLabel = (value) => String(value || "")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
+      const buildStats = (orderData, paymentData) => {
+        const totalOrders = orderData.length;
+        const paidOrders = paymentData.filter(p => p.status === "succeeded").length;
+        const pendingOrders = orderData.filter(o => o.payment_status === "requires_payment_method").length;
+        const totalRevenue = paymentData
+          .filter(p => p.status === "succeeded")
+          .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+        const html = `
+          <div class="stat-card">
+            <div class="label">Total Orders</div>
+            <div class="big">${totalOrders}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Paid Orders</div>
+            <div class="big" style="color: var(--success);">${paidOrders}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Pending Payment</div>
+            <div class="big" style="color: #f57c00;">${pendingOrders}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Total Revenue</div>
+            <div class="big">$${totalRevenue.toFixed(0)}</div>
+          </div>
+        `;
+        document.getElementById("statsContainer").innerHTML = html;
+
+        const orderStatusCount = orderData.reduce((acc, order) => {
+          const key = order.order_status || "unknown";
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+
+        const topStatuses = Object.entries(orderStatusCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+
+        const maxStatusValue = topStatuses[0]?.[1] || 1;
+        document.getElementById("orderStatusBars").innerHTML = topStatuses
+          .map(([status, count]) => {
+            const width = Math.max(8, Math.round((count / maxStatusValue) * 100));
+            return `
+              <div class="bar-row">
+                <span>${prettyLabel(status)}</span>
+                <div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div>
+                <strong>${count}</strong>
+              </div>
+            `;
+          })
+          .join("");
+
+        const paymentSummary = paymentData.reduce((acc, tx) => {
+          const key = tx.status || "pending";
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+
+        const success = paymentSummary.succeeded || 0;
+        const failed = paymentSummary.failed || 0;
+        const other = Math.max(0, paymentData.length - success - failed);
+        const totalTx = Math.max(paymentData.length, 1);
+        const successPct = Math.round((success / totalTx) * 100);
+        const failedPct = Math.round((failed / totalTx) * 100);
+        const otherPct = Math.max(0, 100 - successPct - failedPct);
+
+        document.getElementById("paymentDonut").style.background =
+          `conic-gradient(#0b6e4f 0 ${successPct}%, #f3a73a ${successPct}% ${successPct + failedPct}%, #d6d6d6 ${successPct + failedPct}% 100%)`;
+        document.getElementById("paymentDonutCenter").textContent = `${paymentData.length} tx`;
+        document.getElementById("paymentLegend").innerHTML = `
+          <div class="legend-row"><span><i class="legend-dot" style="background:#0b6e4f"></i>Succeeded</span><strong>${success}</strong></div>
+          <div class="legend-row"><span><i class="legend-dot" style="background:#f3a73a"></i>Failed</span><strong>${failed}</strong></div>
+          <div class="legend-row"><span><i class="legend-dot" style="background:#d6d6d6"></i>Other</span><strong>${other}</strong></div>
+        `;
+
+        const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+        const insights = [
+          `Revenue is $${totalRevenue.toFixed(2)} across ${totalOrders} orders, averaging $${avgOrder.toFixed(2)} per order.`,
+          `${pendingOrders} orders are waiting for payment completion and may need customer reminders.`,
+          `${failed} transactions failed recently; monitor payment intents and webhook logs for recovery paths.`,
+        ];
+        document.getElementById("insightsList").innerHTML = insights.map((item) => `<li>${item}</li>`).join("");
+      };
+
+      const getFilteredProducts = (products) => {
+        const search = (productsSearchEl?.value || "").trim().toLowerCase();
+        const stock = productsStockFilterEl?.value || "";
+        return products.filter((p) => {
+          const nameMatch = !search || String(p.name || "").toLowerCase().includes(search);
+          const stockNum = Number(p.stock || 0);
+          const stockMatch = !stock || (stock === "in" ? stockNum > 0 : stockNum <= 0);
+          return nameMatch && stockMatch;
+        });
+      };
+
+      const renderProducts = (products) => {
+        const tbody = document.getElementById("productsTbody");
+        const list = getFilteredProducts(products);
+        tbody.innerHTML = products.map((p) => `
+          <tr>
+            <td><img class="prod-thumb" src="${p.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80"}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80';" /></td>
+            <td class="mono">${p._id}</td>
+            <td>${p.name}</td>
+            <td>$${Number(p.price).toFixed(2)}</td>
+            <td>${p.stock}</td>
+            <td>
+              <div class="row">
+                <button class="secondary" data-act="edit" data-id="${p._id}" data-name="${p.name.replace(/"/g, "&quot;")}" data-description="${p.description.replace(/"/g, "&quot;")}" data-price="${p.price}" data-stock="${p.stock}" data-image="${(p.image_url || "").replace(/"/g, "&quot;")}">Edit</button>
+                <button class="danger" data-act="delete" data-id="${p._id}">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+
+        if (list.length !== products.length) {
+          tbody.innerHTML = list.map((p) => `
+            <tr>
+              <td><img class="prod-thumb" src="${p.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80"}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80';" /></td>
+              <td class="mono">${p._id}</td>
+              <td>${p.name}</td>
+              <td>$${Number(p.price).toFixed(2)}</td>
+              <td>${p.stock}</td>
+              <td>
+                <div class="row">
+                  <button class="secondary" data-act="edit" data-id="${p._id}" data-name="${p.name.replace(/"/g, "&quot;")}" data-description="${p.description.replace(/"/g, "&quot;")}" data-price="${p.price}" data-stock="${p.stock}" data-image="${(p.image_url || "").replace(/"/g, "&quot;")}">Edit</button>
+                  <button class="danger" data-act="delete" data-id="${p._id}">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join("");
+        }
+      };
+
+      const loadProducts = async () => {
+        renderSkeletonRows("productsTbody", 6);
+        const res = await api("/products", { method: "GET" });
+        cachedProducts = res.data || [];
+        renderProducts(cachedProducts);
+      };
+
+      const createProduct = async () => {
+        await api("/products", {
+          method: "POST",
+          body: JSON.stringify({
+            name: document.getElementById("pName").value.trim(),
+            description: document.getElementById("pDescription").value.trim(),
+            price: Number(document.getElementById("pPrice").value || 0),
+            stock: Number(document.getElementById("pStock").value || 0),
+            image_url: document.getElementById("pImageUrl").value.trim(),
+          }),
+        });
+        setMsg("Product created");
+        await loadProducts();
+      };
+
+      const updateProductPrompt = async (dataset) => {
+        const name = prompt("Name", dataset.name);
+        if (name === null) return;
+        const description = prompt("Description", dataset.description);
+        if (description === null) return;
+        const price = prompt("Price", dataset.price);
+        if (price === null) return;
+        const stock = prompt("Stock", dataset.stock);
+        if (stock === null) return;
+        const imageUrl = prompt("Image URL", dataset.image || "");
+        if (imageUrl === null) return;
+
+        await api(`/products/${dataset.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name, description, price: Number(price), stock: Number(stock), image_url: imageUrl.trim() }),
+        });
+        setMsg("Product updated");
+        await loadProducts();
+      };
+
+      const deleteProduct = async (id) => {
+        if (!confirm("Delete this product?")) return;
+        await api(`/products/${id}`, { method: "DELETE" });
+        setMsg("Product deleted");
+        await loadProducts();
+      };
+
+      const orderStatuses = ["pending", "paid", "processing", "shipped", "out_for_delivery", "delivered", "cancelled", "dispatched"];
+      const issueTypes = ["none", "out_of_stock", "dispatched_issue", "contact_support"];
+
+      const getRefundState = (order) => {
+        const timeline = Array.isArray(order.timeline) ? order.timeline : [];
+        const request = [...timeline]
+          .reverse()
+          .find((entry) => entry?.metadata?.refund_requested);
+
+        if (!request) {
+          return { requested: false, resolved: false };
+        }
+
+        const requestTime = new Date(request.created_at || 0).getTime();
+        const resolution = [...timeline].reverse().find((entry) => {
+          const created = new Date(entry?.created_at || 0).getTime();
+          const state = entry?.metadata?.refund_resolution;
+          return created >= requestTime && (state === "approved" || state === "rejected");
+        });
+
+        return {
+          requested: true,
+          resolved: Boolean(resolution),
+          resolution: resolution?.metadata?.refund_resolution || null,
+          requestedAt: request.created_at || null,
+          reason: request?.metadata?.reason || "",
+        };
+      };
+
+      const getFilteredOrders = (orders) => {
+        const search = (ordersSearchEl?.value || "").trim().toLowerCase();
+        const status = ordersStatusFilterEl?.value || "";
+        const payment = ordersPaymentFilterEl?.value || "";
+        return orders.filter((o) => {
+          const tracking = String(o.tracking_id || "").toLowerCase();
+          const email = String(o.user?.email || "").toLowerCase();
+          const searchMatch = !search || tracking.includes(search) || email.includes(search);
+          const statusMatch = !status || String(o.order_status || "") === status;
+          const paymentMatch = !payment || String(o.payment_status || "") === payment;
+          return searchMatch && statusMatch && paymentMatch;
+        });
+      };
+
+      const renderOrders = (orders) => {
+        const tbody = document.getElementById("ordersTbody");
+        const list = getFilteredOrders(orders);
+        tbody.innerHTML = list.map((o) => `
+          ${(() => {
+            const refund = getRefundState(o);
+            const canReview = refund.requested && !refund.resolved && o.payment_status !== "refunded";
+            const refundLabel = refund.requested
+              ? (refund.resolved
+                ? (refund.resolution === "approved" ? "approved" : "rejected")
+                : "pending review")
+              : "none";
+            const refundClass = refund.requested
+              ? (refund.resolved
+                ? (refund.resolution === "approved" ? "success" : "failed")
+                : "warn")
+              : "pending";
+
+            return `
+          <tr>
+            <td class="mono">${o.tracking_id}</td>
+            <td>${o.user?.email || "N/A"}</td>
+            <td><span class="badge ${o.order_status === 'paid' || o.order_status === 'processing' ? 'success' : 'pending'}">${prettyLabel(o.order_status)}</span></td>
+            <td><span class="badge ${o.payment_status === 'succeeded' ? 'success' : (o.payment_status === 'failed' ? 'failed' : (o.payment_status === 'refunded' ? 'refunded' : 'pending'))}">${prettyLabel(o.payment_status)}</span></td>
+            <td>
+              <span class="badge ${refundClass}">${refundLabel}</span>
+              ${refund.requestedAt ? `<div style="font-size:.75rem;color:var(--muted);margin-top:4px;">${new Date(refund.requestedAt).toLocaleDateString()}</div>` : ""}
+              ${refund.reason ? `<div style="font-size:.75rem;color:var(--muted);margin-top:3px;max-width:220px;">Reason: ${refund.reason}</div>` : ""}
+            </td>
+            <td>$${o.total_amount}</td>
+            <td>
+              <div class="row">
+                <select id="st-${o._id}">${orderStatuses.map((s) => `<option value="${s}" ${o.order_status === s ? "selected" : ""}>${prettyLabel(s)}</option>`).join("")}</select>
+                <button data-order-update="${o._id}">Save</button>
+                ${canReview ? `<button class="secondary" data-refund-decision="approve" data-order-id="${o._id}">Approve Refund</button>` : ""}
+                ${canReview ? `<button class="danger" data-refund-decision="reject" data-order-id="${o._id}">Reject Refund</button>` : ""}
+              </div>
+            </td>
+          </tr>
+            `;
+          })()}
+        `).join("");
+      };
+
+      const loadOrders = async () => {
+        renderSkeletonRows("ordersTbody", 6);
+        const res = await api("/admin/orders?limit=80", { method: "GET" });
+        cachedOrders = res.data || [];
+        renderOrders(cachedOrders);
+        return cachedOrders;
+      };
+
+      const updateOrderStatus = async (orderId) => {
+        const status = document.getElementById(`st-${orderId}`).value;
+        await api(`/admin/orders/${orderId}/status`, {
+          method: "PATCH",
+          headers: { "x-idempotency-key": crypto.randomUUID() },
+          body: JSON.stringify({ status, issue_type: "none", issue_message: "" }),
+        });
+        setMsg("Order updated");
+        await loadOrders();
+      };
+
+      const decideRefund = async (orderId, decision) => {
+        const isReject = decision === "reject";
+        const note = isReject
+          ? (prompt("Optional rejection note for customer:", "") || "")
+          : "";
+
+        if (!confirm(`Are you sure you want to ${decision} this refund request?`)) {
+          return;
+        }
+
+        await api(`/admin/orders/${orderId}/refund-decision`, {
+          method: "POST",
+          headers: { "x-idempotency-key": crypto.randomUUID() },
+          body: JSON.stringify({ decision, note }),
+        });
+
+        setMsg(`Refund ${decision === "approve" ? "approved" : "rejected"}`);
+        const [orderData, paymentData] = await Promise.all([loadOrders(), loadPayments()]);
+        await loadLedger();
+        buildStats(orderData, paymentData);
+      };
+
+      const loadPayments = async () => {
+        renderSkeletonRows("paymentsTbody", 7);
+        const res = await api("/admin/payments?limit=100", { method: "GET" });
+        cachedPayments = res.data || [];
+        const tbody = document.getElementById("paymentsTbody");
+        const search = (paymentsSearchEl?.value || "").trim().toLowerCase();
+        const status = paymentsStatusFilterEl?.value || "";
+        const list = cachedPayments.filter((p) => {
+          const email = String(p.user?.email || "").toLowerCase();
+          const intent = String(p.payment_intent_id || "").toLowerCase();
+          const searchMatch = !search || email.includes(search) || intent.includes(search);
+          const statusMatch = !status || String(p.status || "") === status;
+          return searchMatch && statusMatch;
+        });
+        tbody.innerHTML = list.map((p) => `
+          <tr>
+            <td>${p.user?.full_name || "Unknown"}</td>
+            <td>${p.user?.email || "N/A"}</td>
+            <td>$${(p.amount / 100).toFixed(2)}</td>
+            <td><span class="badge ${p.status === 'succeeded' ? 'success' : (p.status === 'failed' ? 'failed' : (p.status === 'refunded' ? 'refunded' : 'pending'))}">${prettyLabel(p.status)}</span></td>
+            <td class="mono">${p.order?.tracking_id || "N/A"}</td>
+            <td class="mono">${p.payment_intent_id.substring(0, 16)}...</td>
+            <td>${new Date(p.createdAt).toLocaleDateString()}</td>
+          </tr>
+        `).join("");
+        return cachedPayments;
+      };
+
+      const loadLedger = async () => {
+        renderSkeletonRows("ledgerTbody", 6);
+        const res = await api("/admin/ledger?limit=120", { method: "GET" });
+        cachedLedger = res.data || [];
+        const search = (ledgerSearchEl?.value || "").trim().toLowerCase();
+        const payment = ledgerPaymentFilterEl?.value || "";
+        const list = cachedLedger.filter((entry) => {
+          const tracking = String(entry.tracking_id || "").toLowerCase();
+          const email = String(entry.user_email || "").toLowerCase();
+          const searchMatch = !search || tracking.includes(search) || email.includes(search);
+          const paymentMatch = !payment || String(entry.payment_status || "") === payment;
+          return searchMatch && paymentMatch;
+        });
+        const tbody = document.getElementById("ledgerTbody");
+        tbody.innerHTML = list.map((l) => `
+          <tr>
+            <td>${l.event_type}</td>
+            <td class="mono">${l.tracking_id}</td>
+            <td>${l.user_email}</td>
+            <td>$${(l.amount / 100).toFixed(2)}</td>
+            <td><span class="badge ${l.payment_status === 'succeeded' ? 'success' : 'pending'}">${prettyLabel(l.payment_status)}</span></td>
+            <td>${new Date(l.createdAt).toLocaleString()}</td>
+          </tr>
+        `).join("");
+      };
+
+      const loadWebhooks = async () => {
+        renderSkeletonRows("webhooksTbody", 5);
+        const res = await api("/admin/webhooks?limit=120", { method: "GET" });
+        cachedWebhooks = res.data || [];
+        const search = (webhooksSearchEl?.value || "").trim().toLowerCase();
+        const status = webhooksStatusFilterEl?.value || "";
+        const list = cachedWebhooks.filter((w) => {
+          const eventId = String(w.stripe_event_id || "").toLowerCase();
+          const eventType = String(w.event_type || "").toLowerCase();
+          const searchMatch = !search || eventId.includes(search) || eventType.includes(search);
+          const statusMatch = !status || String(w.processing_status || "") === status;
+          return searchMatch && statusMatch;
+        });
+        const tbody = document.getElementById("webhooksTbody");
+        tbody.innerHTML = list.map((w) => `
+          <tr>
+            <td class="mono">${w.stripe_event_id}</td>
+            <td>${w.event_type}</td>
+            <td><span class="badge ${w.processing_status === 'processed' ? 'success' : 'pending'}">${prettyLabel(w.processing_status)}</span></td>
+            <td>${w.processing_error || "-"}</td>
+            <td>${new Date(w.createdAt).toLocaleString()}</td>
+          </tr>
+        `).join("");
+      };
+
+      const createRefund = async () => {
+        const intentId = document.getElementById("refundIntentId").value.trim();
+        const amount = document.getElementById("refundAmount").value.trim();
+        if (!intentId) {
+          throw new Error("Payment intent id is required");
+        }
+
+        await api(`/stripe/refunds/${encodeURIComponent(intentId)}`, {
+          method: "POST",
+          headers: { "x-idempotency-key": crypto.randomUUID() },
+          body: JSON.stringify(amount ? { amount: Number(amount) } : {}),
+        });
+
+        setMsg("Refund request sent");
+        await Promise.all([loadPayments(), loadLedger()]);
+      };
+
+      document.getElementById("reloadAllBtn").addEventListener("click", async () => {
+        try {
+          setMsg("Reloading all admin data...");
+          renderDashboardSkeleton();
+          const [orderData, paymentData] = await Promise.all([loadOrders(), loadPayments()]);
+          await Promise.all([loadProducts(), loadLedger(), loadWebhooks()]);
+          buildStats(orderData, paymentData);
+          setMsg("All admin data refreshed");
+        } catch (error) {
+          setMsg(error.message || "Failed to reload admin data");
+          showModal("Reload failed", error.message || "Failed to reload admin data");
+        }
+      });
+
+      document.getElementById("createProductBtn").addEventListener("click", async () => {
+        try {
+          await createProduct();
+        } catch (error) {
+          setMsg(error.message || "Create product failed");
+          showModal("Create product failed", error.message || "Create product failed");
+        }
+      });
+
+      document.getElementById("loadProductsBtn").addEventListener("click", async () => {
+        try {
+          await loadProducts();
+          setMsg("Products loaded");
+        } catch (error) {
+          setMsg(error.message || "Load products failed");
+          showModal("Load products failed", error.message || "Load products failed");
+        }
+      });
+
+      productsSearchEl?.addEventListener("input", () => renderProducts(cachedProducts));
+      productsStockFilterEl?.addEventListener("change", () => renderProducts(cachedProducts));
+
+      document.getElementById("productsTbody").addEventListener("click", async (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+
+        try {
+          if (btn.dataset.act === "edit") {
+            await updateProductPrompt(btn.dataset);
+          }
+          if (btn.dataset.act === "delete") {
+            await deleteProduct(btn.dataset.id);
+          }
+        } catch (error) {
+          setMsg(error.message || "Product action failed");
+          showModal("Product action failed", error.message || "Product action failed");
+        }
+      });
+
+      document.getElementById("loadOrdersBtn").addEventListener("click", async () => {
+        try {
+          await loadOrders();
+          setMsg("Orders loaded");
+        } catch (error) {
+          setMsg(error.message || "Load orders failed");
+          showModal("Load orders failed", error.message || "Load orders failed");
+        }
+      });
+
+      ordersSearchEl?.addEventListener("input", () => renderOrders(cachedOrders));
+      ordersStatusFilterEl?.addEventListener("change", () => renderOrders(cachedOrders));
+      ordersPaymentFilterEl?.addEventListener("change", () => renderOrders(cachedOrders));
+
+      document.getElementById("ordersTbody").addEventListener("click", async (event) => {
+        const statusBtn = event.target.closest("button[data-order-update]");
+        const refundBtn = event.target.closest("button[data-refund-decision]");
+        if (!statusBtn && !refundBtn) return;
+
+        try {
+          if (statusBtn) {
+            await updateOrderStatus(statusBtn.dataset.orderUpdate);
+            return;
+          }
+
+          await decideRefund(refundBtn.dataset.orderId, refundBtn.dataset.refundDecision);
+        } catch (error) {
+          setMsg(error.message || "Update order failed");
+          showModal("Update order failed", error.message || "Update order failed");
+        }
+      });
+
+      document.getElementById("refundBtn").addEventListener("click", async () => {
+        try {
+          await createRefund();
+        } catch (error) {
+          setMsg(error.message || "Refund failed");
+          showModal("Refund failed", error.message || "Refund failed");
+        }
+      });
+
+      document.getElementById("loadPaymentsBtn").addEventListener("click", async () => {
+        try {
+          await loadPayments();
+          setMsg("Payments loaded");
+        } catch (error) {
+          setMsg(error.message || "Load payments failed");
+          showModal("Load payments failed", error.message || "Load payments failed");
+        }
+      });
+
+      paymentsSearchEl?.addEventListener("input", () => {
+        const tbody = document.getElementById("paymentsTbody");
+        if (!tbody) return;
+        const search = (paymentsSearchEl.value || "").trim().toLowerCase();
+        const status = paymentsStatusFilterEl?.value || "";
+        const list = cachedPayments.filter((p) => {
+          const email = String(p.user?.email || "").toLowerCase();
+          const intent = String(p.payment_intent_id || "").toLowerCase();
+          const searchMatch = !search || email.includes(search) || intent.includes(search);
+          const statusMatch = !status || String(p.status || "") === status;
+          return searchMatch && statusMatch;
+        });
+        tbody.innerHTML = list.map((p) => `
+          <tr>
+            <td>${p.user?.full_name || "Unknown"}</td>
+            <td>${p.user?.email || "N/A"}</td>
+            <td>$${(p.amount / 100).toFixed(2)}</td>
+            <td><span class="badge ${p.status === 'succeeded' ? 'success' : (p.status === 'failed' ? 'failed' : (p.status === 'refunded' ? 'refunded' : 'pending'))}">${prettyLabel(p.status)}</span></td>
+            <td class="mono">${p.order?.tracking_id || "N/A"}</td>
+            <td class="mono">${p.payment_intent_id.substring(0, 16)}...</td>
+            <td>${new Date(p.createdAt).toLocaleDateString()}</td>
+          </tr>
+        `).join("");
+      });
+
+      paymentsStatusFilterEl?.addEventListener("change", () => paymentsSearchEl?.dispatchEvent(new Event("input")));
+
+      document.getElementById("loadLedgerBtn").addEventListener("click", async () => {
+        try {
+          await loadLedger();
+          setMsg("Ledger loaded");
+        } catch (error) {
+          setMsg(error.message || "Load ledger failed");
+          showModal("Load ledger failed", error.message || "Load ledger failed");
+        }
+      });
+
+      const renderCachedLedger = () => {
+        const tbody = document.getElementById("ledgerTbody");
+        const search = (ledgerSearchEl?.value || "").trim().toLowerCase();
+        const payment = ledgerPaymentFilterEl?.value || "";
+        const list = cachedLedger.filter((entry) => {
+          const tracking = String(entry.tracking_id || "").toLowerCase();
+          const email = String(entry.user_email || "").toLowerCase();
+          const searchMatch = !search || tracking.includes(search) || email.includes(search);
+          const paymentMatch = !payment || String(entry.payment_status || "") === payment;
+          return searchMatch && paymentMatch;
+        });
+        tbody.innerHTML = list.map((l) => `
+          <tr>
+            <td>${l.event_type}</td>
+            <td class="mono">${l.tracking_id}</td>
+            <td>${l.user_email}</td>
+            <td>$${(l.amount / 100).toFixed(2)}</td>
+            <td><span class="badge ${l.payment_status === 'succeeded' ? 'success' : 'pending'}">${prettyLabel(l.payment_status)}</span></td>
+            <td>${new Date(l.createdAt).toLocaleString()}</td>
+          </tr>
+        `).join("");
+      };
+
+      ledgerSearchEl?.addEventListener("input", renderCachedLedger);
+      ledgerPaymentFilterEl?.addEventListener("change", renderCachedLedger);
+
+      document.getElementById("loadWebhooksBtn").addEventListener("click", async () => {
+        try {
+          await loadWebhooks();
+          setMsg("Webhooks loaded");
+        } catch (error) {
+          setMsg(error.message || "Load webhook logs failed");
+          showModal("Load webhook logs failed", error.message || "Load webhook logs failed");
+        }
+      });
+
+      const renderCachedWebhooks = () => {
+        const tbody = document.getElementById("webhooksTbody");
+        const search = (webhooksSearchEl?.value || "").trim().toLowerCase();
+        const status = webhooksStatusFilterEl?.value || "";
+        const list = cachedWebhooks.filter((w) => {
+          const eventId = String(w.stripe_event_id || "").toLowerCase();
+          const eventType = String(w.event_type || "").toLowerCase();
+          const searchMatch = !search || eventId.includes(search) || eventType.includes(search);
+          const statusMatch = !status || String(w.processing_status || "") === status;
+          return searchMatch && statusMatch;
+        });
+        tbody.innerHTML = list.map((w) => `
+          <tr>
+            <td class="mono">${w.stripe_event_id}</td>
+            <td>${w.event_type}</td>
+            <td><span class="badge ${w.processing_status === 'processed' ? 'success' : 'pending'}">${prettyLabel(w.processing_status)}</span></td>
+            <td>${w.processing_error || "-"}</td>
+            <td>${new Date(w.createdAt).toLocaleString()}</td>
+          </tr>
+        `).join("");
+      };
+
+      webhooksSearchEl?.addEventListener("input", renderCachedWebhooks);
+      webhooksStatusFilterEl?.addEventListener("change", renderCachedWebhooks);
+
+      (async () => {
+        try {
+          renderDashboardSkeleton();
+          await verifyAdmin();
+          const [orderData, paymentData] = await Promise.all([loadOrders(), loadPayments()]);
+          await Promise.all([loadProducts(), loadLedger(), loadWebhooks()]);
+          buildStats(orderData, paymentData);
+        } catch (error) {
+          setMsg(error.message || "Admin dashboard initialization failed");
+          showModal("Admin dashboard initialization failed", error.message || "Admin dashboard initialization failed");
+        }
+      })();
+    </script>
+  </body>
+</html>

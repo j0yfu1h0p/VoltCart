@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Products</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap");
+
+      :root {
+        --bg: #ecf3df;
+        --panel: #fffdf7;
+        --ink: #1f2a1d;
+        --muted: #52614f;
+        --line: #d8e3cd;
+        --accent: #bf360c;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 100% 0%, #ffd3a8 0, transparent 28%), var(--bg);
+      }
+
+      .wrap { width: min(1120px, 92vw); margin: 0 auto; }
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+      }
+
+      .top a, .top button {
+        text-decoration: none;
+        color: var(--ink);
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 9px 13px;
+        cursor: pointer;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(140deg, #fffdf7, #f4f9ec);
+        padding: 18px;
+        margin-bottom: 14px;
+      }
+
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      label { display: block; font-size: 0.9rem; color: var(--muted); }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+        font: inherit;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .thumb {
+        width: 100%;
+        height: 180px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        object-fit: cover;
+        background: #f4f7ef;
+        margin-bottom: 10px;
+      }
+
+      .meta { color: var(--muted); font-size: 0.88rem; }
+      .money { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-weight: 600; }
+      .actions { margin-top: 10px; display: flex; gap: 8px; }
+      .actions button { flex: 1; border: 0; border-radius: 9px; padding: 10px; cursor: pointer; }
+      .primary { background: var(--ink); color: #fff; }
+      .ghost { background: #fff; border: 1px solid var(--line); }
+      .actions button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .message { margin: 10px 0 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+
+      @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } .row { grid-template-columns: 1fr; } }
+      @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <h1>Browse Products</h1>
+        <div class="row">
+          <label>Search by product name
+            <input id="search" placeholder="keyboard" />
+          </label>
+        </div>
+        <p id="message" class="message"></p>
+      </section>
+
+      <section id="productGrid" class="grid"></section>
+    </main>
+
+    <script>
+      const authUser = JSON.parse(localStorage.getItem("auth_user") || "null");
+      const authToken = localStorage.getItem("auth_token") || "";
+      const authLink = document.getElementById("authLink");
+      const adminLink = document.getElementById("adminLink");
+      const apiBase = "http://localhost:3000";
+      const messageEl = document.getElementById("message");
+      const searchEl = document.getElementById("search");
+      const grid = document.getElementById("productGrid");
+
+      if (authUser && authLink) {
+        authLink.textContent = "Account";
+        authLink.href = "account.html";
+        if (authUser.role === "admin" && adminLink) {
+          adminLink.style.display = "inline-block";
+        }
+      }
+
+      const setMessage = (m) => { messageEl.textContent = m || ""; };
+      const isJwtExpired = (jwt) => {
+        try {
+          const payload = JSON.parse(atob((jwt || "").split(".")[1] || ""));
+          return !payload.exp || Date.now() >= payload.exp * 1000;
+        } catch {
+          return true;
+        }
+      };
+
+      const ensureValidAuthForCheckout = () => {
+        const latestToken = localStorage.getItem("auth_token") || "";
+        if (!latestToken || isJwtExpired(latestToken)) {
+          localStorage.removeItem("auth_token");
+          location.href = "login.html?redirect=checkout.html";
+          return false;
+        }
+        return true;
+      };
+
+      const authHeaders = () => {
+        if (!authToken) return { "Content-Type": "application/json" };
+        return {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        };
+      };
+
+      const loadProducts = async () => {
+        setMessage("Loading products...");
+        grid.innerHTML = Array.from({ length: 6 }, () => `
+          <article class="skeleton-card">
+            <div class="skeleton-thumb"></div>
+            <span class="skeleton" style="height:20px;width:62%"></span>
+            <span class="skeleton" style="height:14px;width:100%"></span>
+            <span class="skeleton" style="height:14px;width:45%"></span>
+            <div style="display:flex;gap:8px;">
+              <span class="skeleton" style="height:38px;width:50%"></span>
+              <span class="skeleton" style="height:38px;width:50%"></span>
+            </div>
+          </article>
+        `).join("");
+
+        const search = searchEl.value.trim();
+        const url = `${apiBase}/products${search ? `?search=${encodeURIComponent(search)}` : ""}`;
+
+        let response;
+        try {
+          response = await fetch(url);
+        } catch {
+          setMessage("Network error while loading products");
+          return;
+        }
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          setMessage(payload.message || "Failed to load products");
+          return;
+        }
+
+        const products = payload.data || [];
+        if (products.length === 0) {
+          setMessage("No products found");
+          grid.innerHTML = `
+            <article class="card" style="grid-column: 1 / -1; text-align: center;">
+              <h3 style="margin: 6px 0;">No products found</h3>
+              <p class="meta" style="margin: 0;">Try a different search or add products from the admin panel.</p>
+            </article>
+          `;
+          return;
+        }
+
+        setMessage("");
+        grid.innerHTML = products.map((p) => `
+          <article class="card">
+            <img
+              class="thumb"
+              src="${p.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80"}"
+              alt="${p.name}"
+              loading="lazy"
+              onerror="this.src='https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80';"
+            />
+            <h3>${p.name}</h3>
+            <p class="meta">${p.description}</p>
+            <p class="money">$${Number(p.price).toFixed(2)} | stock ${p.stock}</p>
+            <div class="actions">
+              <button class="primary" data-action="add" data-id="${p._id}" data-stock="${p.stock}" ${Number(p.stock) <= 0 ? "disabled" : ""}>${Number(p.stock) <= 0 ? "Out of stock" : "Add to cart"}</button>
+              <button class="ghost" data-action="buy" data-id="${p._id}" data-stock="${p.stock}" ${Number(p.stock) <= 0 ? "disabled" : ""}>Buy now</button>
+            </div>
+          </article>
+        `).join("");
+      };
+
+      const addToCart = async (productId, quantity = 1) => {
+        if (!authToken || isJwtExpired(authToken)) {
+          localStorage.removeItem("auth_token");
+          location.href = "login.html?redirect=product.html";
+          return false;
+        }
+
+        const response = await fetch(`${apiBase}/c/cart/items`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ product_id: productId, quantity }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          setMessage(payload.message || "Could not add to cart");
+          return false;
+        }
+
+        setMessage("Added to cart");
+        return true;
+      };
+
+      grid.addEventListener("click", async (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const productId = button.dataset.id;
+        const stock = Number(button.dataset.stock || 0);
+
+        if (stock <= 0) {
+          setMessage("Only 0 units available");
+          return;
+        }
+
+        if (action === "add") {
+          await addToCart(productId, 1);
+          return;
+        }
+
+        if (action === "buy") {
+          const ok = await addToCart(productId, 1);
+          if (ok && ensureValidAuthForCheckout()) location.href = "checkout.html";
+        }
+      });
+
+      searchEl.addEventListener("input", () => {
+        clearTimeout(window.productSearchTimer);
+        window.productSearchTimer = setTimeout(loadProducts, 250);
+      });
+
+      loadProducts();
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoltCart - Cart</title>
+    <link rel="stylesheet" href="shared-shell.css" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap");
+      :root {
+        --bg: #f4efe1;
+        --panel: #fff;
+        --ink: #20281d;
+        --muted: #66715f;
+        --line: #d8d0bf;
+        --accent: #00695c;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "Manrope", sans-serif; background: radial-gradient(circle at 5% 0%, #fcd9b4 0, transparent 32%), var(--bg); color: var(--ink); }
+      .wrap { width: min(1040px, 92vw); margin: 0 auto; }
+      .top { padding: 18px 0; display: flex; justify-content: space-between; align-items: center; }
+      .top a { text-decoration: none; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; }
+      .layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; }
+      .panel { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 14px; }
+      .item { display: grid; grid-template-columns: 72px 1fr auto auto; gap: 10px; border-bottom: 1px solid var(--line); padding: 12px 0; align-items: center; }
+      .item:last-child { border-bottom: 0; }
+      .item-thumb { width: 72px; height: 72px; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; background: #f5f5f5; }
+      .meta { color: var(--muted); font-size: 0.85rem; }
+      .mono { font-family: "IBM Plex Mono", monospace; }
+      button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+      .pay { width: 100%; margin-top: 10px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; padding: 12px; font-weight: 700; cursor: pointer; }
+      .msg { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+      @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .item { grid-template-columns: 1fr; } .item-thumb { width: 100%; height: 180px; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="layout">
+        <article class="panel">
+          <h2>Your cart</h2>
+          <p id="message" class="msg"></p>
+          <div id="cartList"></div>
+        </article>
+        <aside class="panel">
+          <h3>Summary</h3>
+          <p>Subtotal: <span class="mono" id="subtotal">$0.00</span></p>
+          <p>Shipping: <span class="mono">$10.00</span></p>
+          <p>Total: <strong class="mono" id="total">$10.00</strong></p>
+          <button class="pay" id="checkoutBtn">Proceed to checkout</button>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const token = localStorage.getItem("auth_token") || "";
+      const isJwtExpired = (jwt) => {
+        try {
+          const payload = JSON.parse(atob((jwt || "").split(".")[1] || ""));
+          return !payload.exp || Date.now() >= payload.exp * 1000;
+        } catch {
+          return true;
+        }
+      };
+
+      if (!token || isJwtExpired(token)) {
+        localStorage.removeItem("auth_token");
+        location.href = "login.html?redirect=cart.html";
+      }
+
+      const apiBase = "http://localhost:3000";
+      const listEl = document.getElementById("cartList");
+      const subtotalEl = document.getElementById("subtotal");
+      const totalEl = document.getElementById("total");
+      const messageEl = document.getElementById("message");
+
+      const setMessage = (m) => { messageEl.textContent = m || ""; };
+      const authHeaders = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+      const currency = (value) => `$${Number(value).toFixed(2)}`;
+
+      const loadCart = async () => {
+        setMessage("Loading cart...");
+        listEl.innerHTML = Array.from({ length: 3 }, () => `
+          <div class="item" style="grid-template-columns:72px 1fr auto auto;">
+            <span class="skeleton" style="height:72px;border-radius:10px;"></span>
+            <div>
+              <span class="skeleton" style="height:18px;width:60%;"></span>
+              <span class="skeleton" style="height:13px;width:35%;margin-top:8px;"></span>
+            </div>
+            <span class="skeleton" style="height:16px;width:72px;"></span>
+            <span class="skeleton" style="height:30px;width:120px;"></span>
+          </div>
+        `).join("");
+
+        const response = await fetch(`${apiBase}/c/cart`, { headers: authHeaders() });
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok || !payload.success) {
+          setMessage(payload.message || "Unable to load cart");
+          listEl.innerHTML = "";
+          return;
+        }
+
+        const items = payload.data?.items || [];
+        if (items.length === 0) {
+          listEl.innerHTML = "<p class='meta'>Cart is empty</p>";
+          subtotalEl.textContent = "$0.00";
+          totalEl.textContent = "$10.00";
+          setMessage("");
+          return;
+        }
+
+        const subtotal = items.reduce((sum, item) => {
+          const unit = item.product_id?.price || 0;
+          return sum + unit * item.quantity;
+        }, 0);
+
+        subtotalEl.textContent = currency(subtotal);
+        totalEl.textContent = currency(subtotal + 10);
+
+        listEl.innerHTML = items.map((item) => {
+          const product = item.product_id || {};
+          return `
+            <div class="item">
+              <img
+                class="item-thumb"
+                src="${product.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80"}"
+                alt="${product.name || "Product image"}"
+                loading="lazy"
+                onerror="this.src='https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80';"
+              />
+              <div>
+                <strong>${product.name || "Unknown product"}</strong>
+                <div class="meta">stock ${product.stock ?? 0}</div>
+              </div>
+              <div class="mono">${currency(product.price || 0)}</div>
+              <div>
+                <button data-action="minus" data-id="${product._id}">-</button>
+                <span>${item.quantity}</span>
+                <button data-action="plus" data-id="${product._id}">+</button>
+                <button data-action="remove" data-id="${product._id}">Remove</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        setMessage("");
+      };
+
+      const updateQty = async (productId, quantity) => {
+        const response = await fetch(`${apiBase}/c/cart/items/${productId}`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: JSON.stringify({ quantity }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          setMessage(payload.message || "Failed to update item");
+          return;
+        }
+
+        await loadCart();
+      };
+
+      const removeItem = async (productId) => {
+        const response = await fetch(`${apiBase}/c/cart/items/${productId}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          setMessage(payload.message || "Failed to remove item");
+          return;
+        }
+
+        await loadCart();
+      };
+
+      listEl.addEventListener("click", async (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+
+        const productId = btn.dataset.id;
+        const action = btn.dataset.action;
+
+        if (action === "remove") {
+          await removeItem(productId);
+          return;
+        }
+
+        const currentQty = Number(btn.parentElement.querySelector("span")?.textContent || 1);
+        if (action === "plus") {
+          await updateQty(productId, currentQty + 1);
+        }
+        if (action === "minus") {
+          await updateQty(productId, Math.max(1, currentQty - 1));
+        }
+      });
+
+      document.getElementById("checkoutBtn").addEventListener("click", () => {
+        const latestToken = localStorage.getItem("auth_token") || "";
+        if (!latestToken || isJwtExpired(latestToken)) {
+          localStorage.removeItem("auth_token");
+          location.href = "login.html?redirect=checkout.html";
+          return;
+        }
+        location.href = "checkout.html";
+      });
+
+      loadCart().catch(() => {
+        setMessage("Network error while loading cart");
+      });
+    </script>
+    <script src="shared-shell.js"></script>
+  </body>
+</html>
